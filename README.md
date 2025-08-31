@@ -92,7 +92,7 @@ python3 compare.py \
     --output overlap.png
 ```
 
-![A stacked bar chart and cumulative line chart comparing Plex vs. Letterboxd watched histories](./compare.png)
+![A stacked bar chart and cumulative line chart comparing Plex vs. Letterboxd watched histories](./overlap.png)
 *Comparison of Plex vs. Letterboxd Watched Movies*
 
 This is handy if you don't religiously record your movies on Letterboxd. It allows you to slice the data.
@@ -118,9 +118,9 @@ python3 compare.py --help
 
 ---
 
-**notes**
+**notes.**
 - **degenerate titles**
-  - Letterboxd's importer is quite intelligent. Since this script exports TMDB IDs from Plex, it should be able to match most movies by TMDB ID. It will very likely not match all of them.
+  - Letterboxd's importer is quite intelligent. Since this script exports TMDB IDs from Plex, it should be able to match most movies by TMDB ID. It will very likely not match all of them, so tagging with "plex" or some unique string can help you filter the imports on Letterboxd, especially if you watched timestamps on Plex and diary entries on Letterboxd are temporally mixed.
 - **read-only to Plex API**
   - never modifies the data on Plex server
 
