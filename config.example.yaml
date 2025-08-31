@@ -1,0 +1,38 @@
+# Plex to Letterboxd Export Configuration
+
+# Plex Configuration - Choose ONE method:
+
+# Method 1: Direct Plex configuration (alternative to kometa)
+# https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
+plex:
+  url: http://localhost:32400 
+  token: YOUR_PLEX_TOKEN_HERE
+  timeout: 60
+
+# Method 2: Kometa users who already have a Plex token stored
+# kometa:
+#  config_path: ~/.config/kometa/config.yml  # Path to your kometa config file
+# Override Plex URL (optional - only if different from kometa config)
+# plex:
+#   url: http://your-plex-server:32400
+
+export:
+  output_file: null  # Optional: specify custom filename, defaults to plex-watched-{user}-{date}.csv  
+  date_from: null  # YYYY-MM-DD, null for all history
+  user: null  # Plex username, or null for all users
+  library_name: Movies
+  
+# Letterboxd CSV format requirements:
+# - UTF-8 encoding
+# - Up to 1,900 films per file (Letterboxd's limit)
+# - Supports: tmdbID, Title, Year, Directors, WatchedDate, Rating, Review, Tags, Rewatch
+letterboxd:
+  include_rating: false  # export Plex ratings
+  include_reviews: false # export Plex reviews
+  max_films_per_file: 1900
+  # Tag configuration
+  export_genres_as_tags: false  # export Plex genres as Letterboxd tags
+  custom_tags: null  # tage all Letterboxd imports with a tag ("plex", "imported", ..)
+  # Rewatch handling
+  rewatch_mode: all  # false/null (no rewatches), first (initial date watched), last (most recent), all
+  mark_rewatches: true  # mark rewatches in Letterboxd by date watched

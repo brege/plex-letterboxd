@@ -1,0 +1,4 @@
+*.csv
+*.png
+data/*
+config.y*ml
