@@ -13,6 +13,9 @@ export:
   to: str|None             # YYYY-MM-DD
   user: str|None
   library: str             # default: Movies
+  dir: str                 # default: data
+  file_pattern: str        # default: plex-watched-{user}-{timestamp}.csv
+  timestamp_format: str    # 'datetime' (YYYY-MM-DD-HH-MM) or 'date' (YYYY-MM-DD)
 
 csv:
   rating: bool
@@ -84,6 +87,11 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "to": export_in.get("to"),
         "user": export_in.get("user"),
         "library": export_in.get("library", "Movies"),
+        "dir": export_in.get("dir", "data"),
+        "file_pattern": export_in.get(
+            "file_pattern", "plex-watched-{user}-{timestamp}.csv"
+        ),
+        "timestamp_format": export_in.get("timestamp_format", "datetime"),
     }
     out["export"] = out_export
 
@@ -98,5 +106,18 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
         "mark_rewatch": lb_in.get("mark_rewatch", True),
     }
     out["csv"] = out_csv
+
+    # Checkpoint settings
+    cp_in = dict(config.get("checkpoint", {}) or {})
+    out_cp = {
+        "use_csv": cp_in.get("use_csv", True),
+        "path": cp_in.get("path", ".last-run.json"),
+    }
+    out["checkpoint"] = out_cp
+
+    # Clamp timestamp_format
+    tf = out["export"].get("timestamp_format", "datetime")
+    if tf not in ("datetime", "date"):
+        out["export"]["timestamp_format"] = "datetime"
 
     return out

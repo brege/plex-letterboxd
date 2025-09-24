@@ -23,20 +23,76 @@ from lib.config import load_config, extract_plex_config, normalize_config
 
 # Moved: process_watch_history_by_config, export_to_csv (see lib/csv.py)
 
-def generate_default_filename(user_filter=None, date_from=None, date_to=None):
-    """Generate smart default filename based on user and date"""
+def _timestamp_format_str(cfg_fmt: str) -> str:
+    return "%Y-%m-%d-%H-%M" if cfg_fmt == "datetime" else "%Y-%m-%d"
+
+
+def _now_stamp(cfg_fmt: str) -> str:
+    return datetime.now().strftime(_timestamp_format_str(cfg_fmt))
+
+
+def build_output_path(config, user_filter: str | None, export_dir_override: str | None) -> str:
+    """Build output path using export.dir and file_pattern with {user} and {timestamp}."""
+    import os
+
+    user_part = user_filter if user_filter else "all"
+    export_dir = export_dir_override or config["export"].get("dir", "data")
+    pattern = config["export"].get("file_pattern", "plex-watched-{user}-{timestamp}.csv")
+    ts = _now_stamp(config["export"].get("timestamp_format", "datetime"))
+    filename = pattern.format(user=user_part, timestamp=ts)
+    os.makedirs(export_dir, exist_ok=True)
+    return os.path.join(export_dir, filename)
+
+
+def _parse_stamp_or_date(s: str, cfg_fmt: str | None = None):
+    from datetime import datetime as _dt
+    # Try configured format first
+    if cfg_fmt:
+        try:
+            return _dt.strptime(s, _timestamp_format_str(cfg_fmt))
+        except ValueError:
+            pass
+    # Then try both known formats
+    for fmt in ("%Y-%m-%d-%H-%M", "%Y-%m-%d"):
+        try:
+            return _dt.strptime(s, fmt)
+        except ValueError:
+            continue
+    raise ValueError("Unrecognized timestamp/date format")
+
+
+def find_checkpoint_from_csv(config, user_filter: str | None, export_dir_override: str | None):
+    """Find latest CSV for user in export.dir and return a from-date string (YYYY-MM-DD-HH-MM)."""
+    import os
+    import glob
+
+    export_dir = export_dir_override or config["export"].get("dir", "data")
     user_part = user_filter if user_filter else "all"
 
-    if date_from and date_to:
-        date_part = f"{date_from}-to-{date_to}"
-    elif date_from:
-        date_part = f"from-{date_from}"
-    elif date_to:
-        date_part = f"to-{date_to}"
-    else:
-        date_part = datetime.now().strftime("%Y-%m-%d")
+    # Match both new timestamped and legacy date-only filenames
+    patterns = [
+        os.path.join(export_dir, f"plex-watched-{user_part}-*.csv"),
+    ]
 
-    return f"plex-watched-{user_part}-{date_part}.csv"
+    candidates = []
+    for pat in patterns:
+        for path in glob.glob(pat):
+            base = os.path.basename(path)
+            stem = base[:-4] if base.endswith('.csv') else base
+            # Extract the trailing token after last '-'
+            token = stem.split(f"plex-watched-{user_part}-", 1)[-1]
+            try:
+                dt = _parse_stamp_or_date(token, config["export"].get("timestamp_format", "datetime"))
+                candidates.append((dt, path))
+            except ValueError:
+                continue
+
+    if not candidates:
+        return None
+
+    latest_dt, latest_path = max(candidates, key=lambda t: t[0])
+    # Return formatted stamp for mindate
+    return latest_dt.strftime("%Y-%m-%d-%H-%M")
 
 
 def load_cached_data(file_path):
@@ -130,6 +186,10 @@ def main():
         action="store_true",
         help="List available Plex users before export",
     )
+    parser.add_argument(
+        "--export-dir",
+        help="Override export directory (defaults to config export.dir)",
+    )
 
     args = parser.parse_args()
 
@@ -218,6 +278,9 @@ def main():
         date_from = (
             args.from_date if args.from_date is not None else config["export"].get("from")
         )
+        # If no from-date, infer from last CSV checkpoint when enabled
+        if not date_from and config.get("checkpoint", {}).get("use_csv", True):
+            date_from = find_checkpoint_from_csv(config, user_filter, args.export_dir)
         date_to = args.to_date
 
         print("\nExporting watch history...")
@@ -290,7 +353,7 @@ def main():
     elif config["export"].get("output"):
         output_file = config["export"]["output"]
     else:
-        output_file = generate_default_filename(user_filter, date_from, date_to)
+        output_file = build_output_path(config, user_filter, args.export_dir)
     write_csv(
         watch_history,
         output_file,
