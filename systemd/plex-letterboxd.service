@@ -18,7 +18,7 @@ WorkingDirectory=/opt/plex-letterboxd
 #User=plex
 #Group=plex
 
-ExecStart=/usr/bin/python3 exporter.py
+ExecStart=/opt/plex-letterboxd/.venv/bin/python exporter.py
 Environment=PYTHONUNBUFFERED=1
 
 [Install]

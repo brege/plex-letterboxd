@@ -125,7 +125,10 @@ def write_csv(
     # Limit number of films if necessary
     if len(watch_history) > max_films:
         print(
-            f"Warning: {len(watch_history)} films found, limiting to {max_films} for Letterboxd compatibility"
+            (
+                f"Warning: {len(watch_history)} films found, limiting to "
+                f"{max_films} for Letterboxd compatibility"
+            )
         )
         watch_history = watch_history[:max_films]
 
