@@ -32,10 +32,11 @@ plex:
   timeout: 60
 ```
 
-Kometa config
+For Kometa users, you may import your existing configuration to fetch
+your Plex token.
 ```yaml
 kometa:
-  config_path: ./path/to/kometa/config.yml
+  config_path: ./path/to/Kometa/config.yml
 ```
 
 Exporter options live in `config.yaml` (see `config.example.yaml`).
@@ -97,7 +98,7 @@ csv:
   rating: true
 ```
 
-Note: This tool is read‑only to Plex.
+Note: This tool is read‑only to Plex. We do not import, nor have the ability currently, your Letterboxd ratings and watch history into Plex.
 
 ---
 
