@@ -16,7 +16,6 @@ export:
 
 csv:
   rating: bool
-  review: bool
   max_rows: int
   genres: bool             # export genres as tags
   tags: str|None
@@ -92,7 +91,6 @@ def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
     lb_in = dict(config.get("csv", {}) or {})
     out_csv = {
         "rating": lb_in.get("rating", False),
-        "review": lb_in.get("review", False),
         "max_rows": lb_in.get("max_rows", 1900),
         "genres": lb_in.get("genres", False),
         "tags": lb_in.get("tags"),

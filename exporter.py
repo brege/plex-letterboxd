@@ -4,8 +4,6 @@ Plex to Letterboxd Export Script
 Exports Plex watch history to Letterboxd-compatible CSV format
 """
 
-import csv
-import yaml
 import argparse
 from datetime import datetime
 from lib.client import (
@@ -14,7 +12,6 @@ from lib.client import (
     get_movies_library,
     get_watch_history,
     get_unwatched_movies,
-    extract_tmdb_id_from_plex_item,
 )
 from lib.csv import (
     transform_history,
@@ -28,8 +25,6 @@ from lib.config import load_config, extract_plex_config, normalize_config
 
 def generate_default_filename(user_filter=None, date_from=None, date_to=None):
     """Generate smart default filename based on user and date"""
-    from datetime import datetime
-
     user_part = user_filter if user_filter else "all"
 
     if date_from and date_to:
@@ -63,7 +58,6 @@ def load_cached_data(file_path):
                         "Directors": row["Directors"],
                         "WatchedDate": row["WatchedDate"],
                         "Rating": row.get("Rating", ""),
-                        "Review": row.get("Review", ""),
                         "Tags": row.get("Tags", ""),
                         "Rewatch": row.get("Rewatch", ""),
                         "date_obj": watch_date,
@@ -301,7 +295,6 @@ def main():
         watch_history,
         output_file,
         include_rating=config["csv"]["rating"],
-        include_reviews=config["csv"]["review"],
         max_films=config["csv"]["max_rows"],
     )
 

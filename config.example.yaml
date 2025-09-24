@@ -26,10 +26,9 @@ export:
 # Letterboxd CSV format requirements:
 # - UTF-8 encoding
 # - Up to 1,900 films per file (Letterboxd's limit)
-# - Supports: tmdbID, Title, Year, Directors, WatchedDate, Rating, Review, Tags, Rewatch
+# - Supports: tmdbID, Title, Year, Directors, WatchedDate, Rating, Tags, Rewatch
 csv:
   rating: false           # export Plex ratings
-  review: false           # export Plex reviews
   max_rows: 1900
   # Tag configuration
   genres: false           # export Plex genres as tags
