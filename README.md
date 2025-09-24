@@ -3,10 +3,22 @@
 Export your Plex watch history to a Letterboxd‑compatible CSV with TMDB IDs for reliable matching.
 
 ### Install
+
 ```bash
 git clone https://github.com/brege/plex-letterboxd.git
 cd plex-letterboxd
-pip install plexapi pyyaml
+
+# Create an isolated environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+Debian/Ubuntu note: if `python3 -m venv` is missing, install it:
+```bash
+sudo apt install python3-venv
 ```
 
 ### Configure
@@ -71,8 +83,6 @@ Notes: read‑only to Plex (does not modify server data).
 
 **Configuration**: see [`config.example.yaml`](config.example.yaml)
 
-<!-- Comparison tool usage moved out of README to keep essentials only. See compare.py --help if needed. -->
-
 ---
 
 ### Ratings
@@ -87,7 +97,7 @@ csv:
   rating: true
 ```
 
-Notes: This tool is read‑only to Plex.
+Note: This tool is read‑only to Plex.
 
 ---
 

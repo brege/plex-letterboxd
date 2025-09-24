@@ -1,0 +1,25 @@
+# plex-letterboxd.service
+# Copy this file and the timer to /etc/systemd/system/
+#  cp plex-letterboxd.* /etc/systemd/system/
+#  systemctl daemon-reload
+#  systemctl enable plex-letterboxd.timer
+# Assumes
+#  - plex-letterboxd is installed in /opt/plex-letterboxd
+#  - you have a config.yaml in /opt/plex-letterboxd
+
+[Unit]
+Description=Plex to Letterboxd exporter (oneshot)
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/plex-letterboxd
+
+#User=plex
+#Group=plex
+
+ExecStart=/usr/bin/python3 exporter.py
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
