@@ -62,6 +62,7 @@ The CSV includes these Letterboxd-compatible columns:
 | `Year`        | Release year                       |
 | `Directors`   | Director names                     |
 | `WatchedDate` | When you watched it (YYYY-MM-DD)   |
+| `Rating`      | Optional. Your rating (0.5–5.0)    |
 | `Tags`        | Movie genres                       |
 | `Rewatch`     | Whether it's a rewatch             |
 
@@ -115,6 +116,26 @@ See:
 ``` bash
 python3 compare.py --help
 ```
+
+---
+
+### Ratings
+
+- Enable ratings by setting `letterboxd.include_rating: true` in `config.yaml`.
+- By default, Plex user ratings (1–10) are converted to Letterboxd’s 0.5–5.0 scale and rounded to the nearest half-star.
+- You can disable conversion (export raw Plex values) by setting `letterboxd.convert_plex_rating_to_letterboxd: false`.
+- Unrated or 0 values are exported as blank.
+
+Example:
+```yaml
+letterboxd:
+  include_rating: true
+  convert_plex_rating_to_letterboxd: true  # default
+```
+
+Notes:
+- Letterboxd import accepts half-star increments between 0.5 and 5.0.
+- Plex doesn’t store per-user “reviews” similarly; the `Review` column remains blank unless you customize it.
 
 ---
 

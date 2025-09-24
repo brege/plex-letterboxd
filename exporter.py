@@ -138,65 +138,61 @@ def get_watch_history(server, library, user_filter=None, date_from=None, date_to
     watch_history = []
 
     try:
-        # Get server history instead of individual movie history
-        print("Getting server watch history...")
-        history = server.history()
-        print(f"Found {len(history)} total history entries")
-
-        # Filter for movies only
-        movie_history = [
-            entry
-            for entry in history
-            if hasattr(entry, "type") and entry.type == "movie"
-        ]
-        print(f"Found {len(movie_history)} movie watch entries")
-
-        # Build cache of library movies with their TMDB IDs
-        print("Building movie metadata cache...")
-        movie_cache = {}
-        try:
-            all_movies = library.all()
-            for movie in all_movies:
-                movie_cache[movie.ratingKey] = {
-                    "tmdb_id": extract_tmdb_id_from_plex_item(movie),
-                    "directors": (
-                        ", ".join([director.tag for director in movie.directors])
-                        if movie.directors
-                        else ""
-                    ),
-                    "genres": (
-                        ", ".join([tag.tag for tag in movie.genres])
-                        if movie.genres
-                        else ""
-                    ),
-                }
-        except Exception as e:
-            print(f"Warning: Could not build movie cache: {e}")
-
-        # Map user filter to account ID
+        # Map user filter to account ID early so we can filter server-side
         target_account_id = None
         if user_filter:
-            # Try to find the user by name
             users = get_users(server)
             for user in users:
                 if (
                     user["username"] == user_filter
                     or user["title"].lower() == user_filter.lower()
                 ):
-                    # Use legacy_id if available (for owner accounts with historical data)
                     target_account_id = user.get("legacy_id", user["id"])
                     break
+
+        # Build server-side filtered history when possible
+        print("Getting server watch history...")
+        mindate_dt = None
+        if date_from:
+            if isinstance(date_from, str):
+                mindate_dt = datetime.strptime(date_from, "%Y-%m-%d")
+            else:
+                # assume date or datetime
+                mindate_dt = (
+                    datetime.combine(date_from, datetime.min.time())
+                    if hasattr(date_from, "year") and not isinstance(date_from, datetime)
+                    else date_from
+                )
+
+        try:
+            history = server.history(
+                maxresults=5000,
+                mindate=mindate_dt,
+                accountID=target_account_id,
+                librarySectionID=getattr(library, "key", None),
+            )
+        except TypeError:
+            # Older plexapi without some params
+            history = server.history()
+
+        print(f"Found {len(history)} total history entries")
+
+        # Filter for movies only
+        movie_history = [
+            entry for entry in history if hasattr(entry, "type") and entry.type == "movie"
+        ]
+        print(f"Found {len(movie_history)} movie watch entries")
+
+        # Lazy metadata cache keyed by ratingKey
+        movie_cache = {}
 
         print("Processing movie history entries...")
         processed_titles = set()  # Track duplicates
 
         for entry in movie_history:
             try:
-                # Filter by user if specified
-                if (
-                    target_account_id is not None
-                    and entry.accountID != target_account_id
-                ):
+                # Filter by user if specified (server-side might not have applied)
+                if target_account_id is not None and entry.accountID != target_account_id:
                     continue
 
                 # Handle viewed date
@@ -241,8 +237,29 @@ def get_watch_history(server, library, user_filter=None, date_from=None, date_to
                     f"{watch_date_str}"
                 )
 
-                # Get metadata from cache using ratingKey
-                cached_metadata = movie_cache.get(entry.ratingKey, {})
+                # Get metadata from cache or fetch on-demand by ratingKey
+                cached_metadata = movie_cache.get(entry.ratingKey)
+                if cached_metadata is None:
+                    try:
+                        item = server.fetchItem(entry.ratingKey)
+                        cached_metadata = {
+                            "tmdb_id": extract_tmdb_id_from_plex_item(item),
+                            "directors": (
+                                ", ".join([d.tag for d in getattr(item, "directors", [])])
+                                if getattr(item, "directors", None)
+                                else ""
+                            ),
+                            "genres": (
+                                ", ".join([g.tag for g in getattr(item, "genres", [])])
+                                if getattr(item, "genres", None)
+                                else ""
+                            ),
+                            "user_rating": getattr(item, "userRating", None),
+                        }
+                        movie_cache[entry.ratingKey] = cached_metadata
+                    except Exception:
+                        cached_metadata = {}
+
                 tmdb_id = cached_metadata.get("tmdb_id", "")
                 directors = cached_metadata.get("directors", "")
                 genres = cached_metadata.get("genres", "")
@@ -262,10 +279,15 @@ def get_watch_history(server, library, user_filter=None, date_from=None, date_to
                     "Year": getattr(entry, "year", ""),
                     "Directors": directors,
                     "WatchedDate": watch_date_str,
+                    # Prefer user rating from cached movie metadata, fallback to history entry
                     "Rating": (
-                        getattr(entry, "userRating", "")
-                        if hasattr(entry, "userRating")
-                        else ""
+                        cached_metadata.get("user_rating")
+                        if cached_metadata.get("user_rating") is not None
+                        else (
+                            getattr(entry, "userRating", "")
+                            if hasattr(entry, "userRating")
+                            else ""
+                        )
                     ),
                     "Review": "",  # Plex doesn't have reviews in the same way
                     "Tags": genres,  # Will be processed later based on config
@@ -359,6 +381,35 @@ def process_watch_history_by_config(watch_history, config):
 
         # Update tags field
         entry["Tags"] = ", ".join(tags) if tags else ""
+
+    # Handle rating conversion (Plex 1–10 -> Letterboxd 0.5–5.0)
+    include_rating = bool(letterboxd_config.get("include_rating", False))
+    convert_ratings = letterboxd_config.get(
+        "convert_plex_rating_to_letterboxd", True
+    )
+    if include_rating and convert_ratings:
+        for entry in watch_history:
+            r = entry.get("Rating")
+            try:
+                # Treat empty/None/zero as unrated
+                if r in (None, ""):
+                    entry["Rating"] = ""
+                    continue
+                r_float = float(r)
+                if r_float <= 0:
+                    entry["Rating"] = ""
+                    continue
+                # If value looks like already-converted (<= 5), normalize to half-star
+                if r_float <= 5.0:
+                    letterboxd_rating = round(r_float / 0.5) * 0.5
+                else:
+                    # Plex user ratings are typically 1–10; map to 0.5–5.0
+                    letterboxd_rating = round(r_float) / 2.0
+                # Clamp to Letterboxd bounds
+                letterboxd_rating = max(0.5, min(5.0, letterboxd_rating))
+                entry["Rating"] = f"{letterboxd_rating:.1f}".rstrip("0").rstrip(".")
+            except (ValueError, TypeError):
+                entry["Rating"] = ""
 
     return watch_history
 
@@ -562,6 +613,11 @@ def main():
         action="store_true",
         help="Use cached CSV data instead of querying Plex API",
     )
+    parser.add_argument(
+        "--list-users",
+        action="store_true",
+        help="List available Plex users before export",
+    )
 
     args = parser.parse_args()
 
@@ -624,11 +680,15 @@ def main():
         if not server:
             return
 
-        # Get users
+        # Get users (only list when no user filter provided, unless --list-users is set)
         users = get_users(server)
-        print("\nAvailable users:")
-        for user in users:
-            print(f"  - {user['title']} ({user['username']})")
+        user_filter = (
+            args.user if args.user is not None else config["export"].get("user")
+        )
+        if args.list_users or not user_filter:
+            print("\nAvailable users:")
+            for user in users:
+                print(f"  - {user['title']} ({user['username']})")
 
         # Get Movies library
         library = get_movies_library(
@@ -638,9 +698,7 @@ def main():
             return
 
         # Get watch history - command line overrides config
-        user_filter = (
-            args.user if args.user is not None else config["export"].get("user")
-        )
+        # user_filter already derived above
         date_from = (
             args.from_date
             if args.from_date is not None

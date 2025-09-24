@@ -29,6 +29,7 @@ export:
 letterboxd:
   include_rating: false  # export Plex ratings
   include_reviews: false # export Plex reviews
+  convert_plex_rating_to_letterboxd: true  # map Plex 1–10 to Letterboxd 0.5–5.0
   max_films_per_file: 1900
   # Tag configuration
   export_genres_as_tags: false  # export Plex genres as Letterboxd tags
