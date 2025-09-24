@@ -121,16 +121,14 @@ python3 compare.py --help
 
 ### Ratings
 
-- Enable ratings by setting `letterboxd.include_rating: true` in `config.yaml`.
-- By default, Plex user ratings (1–10) are converted to Letterboxd’s 0.5–5.0 scale and rounded to the nearest half-star.
-- You can disable conversion (export raw Plex values) by setting `letterboxd.convert_plex_rating_to_letterboxd: false`.
-- Unrated or 0 values are exported as blank.
+- Enable ratings with `csv.rating: true` in `config.yaml`.
+- Plex user ratings (1–10) are converted to Letterboxd’s 0.5–5.0 scale (half‑star rounding).
+- Unrated or 0 values export as blank.
 
 Example:
 ```yaml
-letterboxd:
-  include_rating: true
-  convert_plex_rating_to_letterboxd: true  # default
+csv:
+  rating: true
 ```
 
 Notes:

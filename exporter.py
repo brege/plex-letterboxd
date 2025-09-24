@@ -16,197 +16,15 @@ from lib.client import (
     get_unwatched_movies,
     extract_tmdb_id_from_plex_item,
 )
+from lib.csv import (
+    transform_history,
+    write_csv,
+)
+from lib.config import load_config, extract_plex_config, normalize_config
 
-def load_config(config_path="config.yaml"):
-    """Load configuration from YAML file"""
-    with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+# Config helpers are provided by lib.config
 
-
-def extract_plex_config(config):
-    """Extract Plex configuration via local or Kometa config file"""
-
-    # Check if using Kometa config method
-    if "kometa" in config and config["kometa"].get("config_path"):
-        kometa_config_path = config["kometa"]["config_path"]
-        try:
-            with open(kometa_config_path, "r") as f:
-                kometa_config = yaml.safe_load(f)
-
-            plex_config = kometa_config.get("plex", {})
-            extracted_config = {
-                "url": plex_config.get("url", "http://localhost:32400"),
-                "token": plex_config.get("token"),
-                "timeout": plex_config.get("timeout", 60),
-            }
-            print(f"Using Plex config from Kometa file: {kometa_config_path}")
-        except Exception as e:
-            print(f"Error reading Kometa config: {e}")
-            return None
-
-    # Check if using direct Plex config method
-    elif "plex" in config and config["plex"].get("token"):
-        extracted_config = {
-            "url": config["plex"].get("url", "http://localhost:32400"),
-            "token": config["plex"].get("token"),
-            "timeout": config["plex"].get("timeout", 60),
-        }
-        print("Using direct Plex configuration from config file")
-
-    else:
-        print("Error: No valid Plex configuration found.")
-        print(
-            "Please configure either 'kometa.config_path' or "
-            "'plex.token' in your config file."
-        )
-        return None
-
-    # Apply URL override if specified
-    plex_overrides = config.get("plex", {})
-    if plex_overrides.get("url") and not config.get("plex", {}).get("token"):
-        # Only override URL if we're not using direct plex config
-        extracted_config["url"] = plex_overrides["url"]
-        print(f"Overriding Plex URL: {extracted_config['url']}")
-
-    return extracted_config
-
-def process_watch_history_by_config(watch_history, config):
-    """Process watch history based on letterboxd config options"""
-    letterboxd_config = config.get("letterboxd", {})
-
-    # Handle rewatch mode filtering
-    rewatch_mode = letterboxd_config.get("rewatch_mode", "all")
-    if rewatch_mode in [False, None, "false", "null"]:
-        # Remove all rewatches, keep only first watches
-        seen_movies = set()
-        filtered_history = []
-        for entry in sorted(watch_history, key=lambda x: x["WatchedDate"]):
-            movie_key = (entry["Title"].lower(), entry["Year"])
-            if movie_key not in seen_movies:
-                entry["Rewatch"] = "No"
-                filtered_history.append(entry)
-                seen_movies.add(movie_key)
-        watch_history = filtered_history
-    elif rewatch_mode == "first":
-        # Keep only first watch of each movie
-        seen_movies = set()
-        filtered_history = []
-        for entry in sorted(watch_history, key=lambda x: x["WatchedDate"]):
-            movie_key = (entry["Title"].lower(), entry["Year"])
-            if movie_key not in seen_movies:
-                entry["Rewatch"] = "No"
-                filtered_history.append(entry)
-                seen_movies.add(movie_key)
-        watch_history = filtered_history
-    elif rewatch_mode == "last":
-        # Keep only most recent watch of each movie
-        movie_latest = {}
-        for entry in watch_history:
-            movie_key = (entry["Title"].lower(), entry["Year"])
-            if (
-                movie_key not in movie_latest
-                or entry["WatchedDate"] > movie_latest[movie_key]["WatchedDate"]
-            ):
-                movie_latest[movie_key] = entry
-        watch_history = list(movie_latest.values())
-        for entry in watch_history:
-            entry["Rewatch"] = "No"
-    # "all" mode keeps everything as-is with rewatch marking
-
-    # Handle rewatch marking
-    mark_rewatches = letterboxd_config.get("mark_rewatches", True)
-    if not mark_rewatches:
-        for entry in watch_history:
-            entry["Rewatch"] = "No"
-
-    # Handle tags
-    export_genres = letterboxd_config.get("export_genres_as_tags", False)
-    custom_tags = letterboxd_config.get("custom_tags", None)
-
-    for entry in watch_history:
-        tags = []
-
-        # Add genres if enabled
-        if export_genres and entry.get("Tags"):
-            tags.append(entry["Tags"])
-
-        # Add custom tags
-        if custom_tags:
-            tags.append(custom_tags)
-
-        # Update tags field
-        entry["Tags"] = ", ".join(tags) if tags else ""
-
-    # Handle rating conversion (Plex 1–10 -> Letterboxd 0.5–5.0)
-    include_rating = bool(letterboxd_config.get("include_rating", False))
-    convert_ratings = letterboxd_config.get(
-        "convert_plex_rating_to_letterboxd", True
-    )
-    if include_rating and convert_ratings:
-        for entry in watch_history:
-            r = entry.get("Rating")
-            try:
-                # Treat empty/None/zero as unrated
-                if r in (None, ""):
-                    entry["Rating"] = ""
-                    continue
-                r_float = float(r)
-                if r_float <= 0:
-                    entry["Rating"] = ""
-                    continue
-                # If value looks like already-converted (<= 5), normalize to half-star
-                if r_float <= 5.0:
-                    letterboxd_rating = round(r_float / 0.5) * 0.5
-                else:
-                    # Plex user ratings are typically 1–10; map to 0.5–5.0
-                    letterboxd_rating = round(r_float) / 2.0
-                # Clamp to Letterboxd bounds
-                letterboxd_rating = max(0.5, min(5.0, letterboxd_rating))
-                entry["Rating"] = f"{letterboxd_rating:.1f}".rstrip("0").rstrip(".")
-            except (ValueError, TypeError):
-                entry["Rating"] = ""
-
-    return watch_history
-
-
-def export_to_csv(
-    watch_history,
-    output_file,
-    include_rating=False,
-    include_reviews=False,
-    max_films=1900,
-):
-    """Export watch history to Letterboxd-compatible CSV"""
-
-    # Define columns based on configuration - tmdbID first for better matching
-    columns = ["tmdbID", "Title", "Year", "Directors", "WatchedDate"]
-
-    if include_rating:
-        columns.append("Rating")
-    if include_reviews:
-        columns.append("Review")
-
-    columns.extend(["Tags", "Rewatch"])
-
-    # Limit number of films if necessary
-    if len(watch_history) > max_films:
-        print(
-            f"Warning: {len(watch_history)} films found, limiting to "
-            f"{max_films} for Letterboxd compatibility"
-        )
-        watch_history = watch_history[:max_films]
-
-    # Write to CSV
-    with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=columns)
-        writer.writeheader()
-
-        for watch in watch_history:
-            # Only include configured columns
-            filtered_watch = {col: watch.get(col, "") for col in columns}
-            writer.writerow(filtered_watch)
-
-    print(f"Exported {len(watch_history)} watch records to {output_file}")
+# Moved: process_watch_history_by_config, export_to_csv (see lib/csv.py)
 
 def generate_default_filename(user_filter=None, date_from=None, date_to=None):
     """Generate smart default filename based on user and date"""
@@ -321,8 +139,9 @@ def main():
 
     args = parser.parse_args()
 
-    # Load configuration
+    # Load and normalize configuration
     config = load_config(args.config)
+    config = normalize_config(config)
 
     # Handle cached data mode
     if args.cached:
@@ -366,7 +185,7 @@ def main():
 
         # Process cached data with config options
         if watch_history:
-            watch_history = process_watch_history_by_config(watch_history, config)
+            watch_history = transform_history(watch_history, config)
     else:
         # Extract Plex configuration (supports Kometa or direct config)
         plex_config = extract_plex_config(config)
@@ -389,10 +208,13 @@ def main():
             print("\nAvailable users:")
             for user in users:
                 print(f"  - {user['title']} ({user['username']})")
+            # If explicitly listing users, exit before exporting
+            if args.list_users:
+                return
 
         # Get Movies library
         library = get_movies_library(
-            server, config["export"].get("library_name", "Movies")
+            server, config["export"].get("library", "Movies")
         )
         if not library:
             return
@@ -400,9 +222,7 @@ def main():
         # Get watch history - command line overrides config
         # user_filter already derived above
         date_from = (
-            args.from_date
-            if args.from_date is not None
-            else config["export"].get("date_from")
+            args.from_date if args.from_date is not None else config["export"].get("from")
         )
         date_to = args.to_date
 
@@ -420,7 +240,7 @@ def main():
 
     # Process watch history based on config options
     if watch_history:
-        watch_history = process_watch_history_by_config(watch_history, config)
+        watch_history = transform_history(watch_history, config)
 
     if not watch_history:
         print("No watch history found matching criteria")
@@ -473,16 +293,16 @@ def main():
     # Determine output filename with smart defaults
     if args.output:
         output_file = args.output
-    elif config["export"].get("output_file"):
-        output_file = config["export"]["output_file"]
+    elif config["export"].get("output"):
+        output_file = config["export"]["output"]
     else:
         output_file = generate_default_filename(user_filter, date_from, date_to)
-    export_to_csv(
+    write_csv(
         watch_history,
         output_file,
-        include_rating=config["letterboxd"]["include_rating"],
-        include_reviews=config["letterboxd"]["include_reviews"],
-        max_films=config["letterboxd"]["max_films_per_file"],
+        include_rating=config["csv"]["rating"],
+        include_reviews=config["csv"]["review"],
+        max_films=config["csv"]["max_rows"],
     )
 
     print(f"\nExport complete! Import the file '{output_file}' to Letterboxd.")

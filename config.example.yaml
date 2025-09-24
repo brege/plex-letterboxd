@@ -17,23 +17,23 @@ plex:
 #   url: http://your-plex-server:32400
 
 export:
-  output_file: null  # Optional: specify custom filename, defaults to plex-watched-{user}-{date}.csv  
-  date_from: null  # YYYY-MM-DD, null for all history
-  user: null  # Plex username, or null for all users
-  library_name: Movies
+  output: null        # Optional: specify custom filename, defaults to plex-watched-{user}-{date}.csv
+  from: null          # YYYY-MM-DD, null for all history
+  to: null            # YYYY-MM-DD, optional upper bound
+  user: null          # Plex username, or null for all users
+  library: Movies
   
 # Letterboxd CSV format requirements:
 # - UTF-8 encoding
 # - Up to 1,900 films per file (Letterboxd's limit)
 # - Supports: tmdbID, Title, Year, Directors, WatchedDate, Rating, Review, Tags, Rewatch
-letterboxd:
-  include_rating: false  # export Plex ratings
-  include_reviews: false # export Plex reviews
-  convert_plex_rating_to_letterboxd: true  # map Plex 1–10 to Letterboxd 0.5–5.0
-  max_films_per_file: 1900
+csv:
+  rating: false           # export Plex ratings
+  review: false           # export Plex reviews
+  max_rows: 1900
   # Tag configuration
-  export_genres_as_tags: false  # export Plex genres as Letterboxd tags
-  custom_tags: null  # tage all Letterboxd imports with a tag ("plex", "imported", ..)
+  genres: false           # export Plex genres as tags
+  tags: null              # tag all exports ("plex", "imported", ..)
   # Rewatch handling
-  rewatch_mode: all  # false/null (no rewatches), first (initial date watched), last (most recent), all
-  mark_rewatches: true  # mark rewatches in Letterboxd by date watched
+  rewatch: all            # false/null (no rewatches), first, last, all
+  mark_rewatch: true      # mark rewatches by date watched
