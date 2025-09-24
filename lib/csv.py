@@ -109,7 +109,6 @@ def write_csv(
     watch_history,
     output_file,
     include_rating=False,
-    include_reviews=False,
     max_films=1900,
 ):
     """Export watch history to Letterboxd-compatible CSV"""
@@ -119,8 +118,7 @@ def write_csv(
 
     if include_rating:
         columns.append("Rating")
-    if include_reviews:
-        columns.append("Review")
+    # Review column removed (Plex has no per-user text reviews)
 
     columns.extend(["Tags", "Rewatch"])
 
