@@ -5,7 +5,7 @@
 # Method 1: Direct Plex configuration (alternative to kometa)
 # https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/
 plex:
-  url: http://localhost:32400 
+  url: http://localhost:32400
   token: YOUR_PLEX_TOKEN_HERE
   timeout: 60
 
@@ -25,7 +25,7 @@ export:
   dir: data           # Directory to store exports
   file_pattern: plex-watched-{user}-{timestamp}.csv  # {user}, {timestamp} = YYYY-MM-DD-HH-MM
   timestamp_format: datetime  # datetime (YYYY-MM-DD-HH-MM) or date (YYYY-MM-DD)
-  
+
 # Letterboxd CSV format requirements:
 # - UTF-8 encoding
 # - Up to 1,900 films per file (Letterboxd's limit)

@@ -64,7 +64,12 @@ def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
         print("Using direct Plex configuration from config file")
     else:
         print("Error: No valid Plex configuration found.")
-        print("Please configure either 'kometa.config_path' or 'plex.token' in your config file.")
+        print(
+            (
+                "Please configure either 'kometa.config_path' or 'plex.token' "
+                "in your config file."
+            )
+        )
         return None
 
     # Allow URL override at top-level plex.url

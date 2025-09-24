@@ -23,6 +23,7 @@ from lib.config import load_config, extract_plex_config, normalize_config
 
 # Moved: process_watch_history_by_config, export_to_csv (see lib/csv.py)
 
+
 def _timestamp_format_str(cfg_fmt: str) -> str:
     return "%Y-%m-%d-%H-%M" if cfg_fmt == "datetime" else "%Y-%m-%d"
 
@@ -31,13 +32,20 @@ def _now_stamp(cfg_fmt: str) -> str:
     return datetime.now().strftime(_timestamp_format_str(cfg_fmt))
 
 
-def build_output_path(config, user_filter: str | None, export_dir_override: str | None) -> str:
-    """Build output path using export.dir and file_pattern with {user} and {timestamp}."""
+def build_output_path(
+    config, user_filter: str | None, export_dir_override: str | None
+) -> str:
+    """
+    Build output path using export.dir and file_pattern with
+    {user} and {timestamp} placeholders.
+    """
     import os
 
     user_part = user_filter if user_filter else "all"
     export_dir = export_dir_override or config["export"].get("dir", "data")
-    pattern = config["export"].get("file_pattern", "plex-watched-{user}-{timestamp}.csv")
+    pattern = config["export"].get(
+        "file_pattern", "plex-watched-{user}-{timestamp}.csv"
+    )
     ts = _now_stamp(config["export"].get("timestamp_format", "datetime"))
     filename = pattern.format(user=user_part, timestamp=ts)
     os.makedirs(export_dir, exist_ok=True)
@@ -46,6 +54,7 @@ def build_output_path(config, user_filter: str | None, export_dir_override: str 
 
 def _parse_stamp_or_date(s: str, cfg_fmt: str | None = None):
     from datetime import datetime as _dt
+
     # Try configured format first
     if cfg_fmt:
         try:
@@ -61,8 +70,13 @@ def _parse_stamp_or_date(s: str, cfg_fmt: str | None = None):
     raise ValueError("Unrecognized timestamp/date format")
 
 
-def find_checkpoint_from_csv(config, user_filter: str | None, export_dir_override: str | None):
-    """Find latest CSV for user in export.dir and return a from-date string (YYYY-MM-DD-HH-MM)."""
+def find_checkpoint_from_csv(
+    config, user_filter: str | None, export_dir_override: str | None
+):
+    """
+    Find latest CSV for the user in export.dir and return a from-date
+    string (YYYY-MM-DD-HH-MM).
+    """
     import os
     import glob
 
@@ -78,11 +92,13 @@ def find_checkpoint_from_csv(config, user_filter: str | None, export_dir_overrid
     for pat in patterns:
         for path in glob.glob(pat):
             base = os.path.basename(path)
-            stem = base[:-4] if base.endswith('.csv') else base
+            stem = base[:-4] if base.endswith(".csv") else base
             # Extract the trailing token after last '-'
             token = stem.split(f"plex-watched-{user_part}-", 1)[-1]
             try:
-                dt = _parse_stamp_or_date(token, config["export"].get("timestamp_format", "datetime"))
+                dt = _parse_stamp_or_date(
+                    token, config["export"].get("timestamp_format", "datetime")
+                )
                 candidates.append((dt, path))
             except ValueError:
                 continue
@@ -267,16 +283,16 @@ def main():
                 return
 
         # Get Movies library
-        library = get_movies_library(
-            server, config["export"].get("library", "Movies")
-        )
+        library = get_movies_library(server, config["export"].get("library", "Movies"))
         if not library:
             return
 
         # Get watch history - command line overrides config
         # user_filter already derived above
         date_from = (
-            args.from_date if args.from_date is not None else config["export"].get("from")
+            args.from_date
+            if args.from_date is not None
+            else config["export"].get("from")
         )
         # If no from-date, infer from last CSV checkpoint when enabled
         if not date_from and config.get("checkpoint", {}).get("use_csv", True):

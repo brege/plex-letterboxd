@@ -59,7 +59,9 @@ def get_users(server: PlexServer) -> List[Dict[str, Any]]:
             }
         )
         for user in server.myPlexAccount().users():
-            users.append({"title": user.title, "username": user.username, "id": user.id})
+            users.append(
+                {"title": user.title, "username": user.username, "id": user.id}
+            )
         return users
     except Exception as e:
         print(f"Error getting users: {e}")
@@ -77,13 +79,16 @@ def get_movies_library(server: PlexServer, library_name: str = "Movies"):
         return None
 
 
-def _resolve_account_id(server: PlexServer, user_filter: Optional[str]) -> Optional[int]:
+def _resolve_account_id(
+    server: PlexServer, user_filter: Optional[str]
+) -> Optional[int]:
     if not user_filter:
         return None
     for user in get_users(server):
-        if user.get("username") == user_filter or user.get("title", "").lower() == str(
-            user_filter
-        ).lower():
+        if (
+            user.get("username") == user_filter
+            or user.get("title", "").lower() == str(user_filter).lower()
+        ):
             return user.get("legacy_id", user.get("id"))
     return None
 
@@ -95,7 +100,10 @@ def get_watch_history(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Get watch history for movies using fast server-side filtering and lazy metadata."""
+    """
+    Get watch history for movies using fast server-side filtering,
+    plus lazy metadata lookups.
+    """
     watch_history: List[Dict[str, Any]] = []
 
     try:
@@ -113,7 +121,8 @@ def get_watch_history(
             else:
                 mindate_dt = (
                     datetime.combine(date_from, datetime.min.time())
-                    if hasattr(date_from, "year") and not isinstance(date_from, datetime)
+                    if hasattr(date_from, "year")
+                    and not isinstance(date_from, datetime)
                     else date_from
                 )
 
@@ -142,7 +151,10 @@ def get_watch_history(
         for entry in movie_history:
             try:
                 # User filter (server-side may not apply in older plexapi)
-                if target_account_id is not None and entry.accountID != target_account_id:
+                if (
+                    target_account_id is not None
+                    and entry.accountID != target_account_id
+                ):
                     continue
 
                 # Viewed date
@@ -181,7 +193,10 @@ def get_watch_history(
                 watch_date_str = viewed_at.strftime("%Y-%m-%d")
 
                 # Unique key (title|year|date)
-                watch_key = f"{entry.title}|{getattr(entry, 'year', 'Unknown')}|{watch_date_str}"
+                watch_key = (
+                    f"{entry.title}|{getattr(entry, 'year', 'Unknown')}|"
+                    f"{watch_date_str}"
+                )
 
                 # Metadata (lazy)
                 cached = movie_cache.get(entry.ratingKey)
@@ -190,16 +205,18 @@ def get_watch_history(
                         item = server.fetchItem(entry.ratingKey)
                         cached = {
                             "tmdb_id": extract_tmdb_id_from_plex_item(item),
-                            "directors": ", ".join(
-                                [d.tag for d in getattr(item, "directors", [])]
-                            )
-                            if getattr(item, "directors", None)
-                            else "",
-                            "genres": ", ".join(
-                                [g.tag for g in getattr(item, "genres", [])]
-                            )
-                            if getattr(item, "genres", None)
-                            else "",
+                            "directors": (
+                                ", ".join(
+                                    [d.tag for d in getattr(item, "directors", [])]
+                                )
+                                if getattr(item, "directors", None)
+                                else ""
+                            ),
+                            "genres": (
+                                ", ".join([g.tag for g in getattr(item, "genres", [])])
+                                if getattr(item, "genres", None)
+                                else ""
+                            ),
                             "user_rating": getattr(item, "userRating", None),
                         }
                         movie_cache[entry.ratingKey] = cached
@@ -236,8 +253,10 @@ def get_watch_history(
                     "Tags": genres,
                     "Rewatch": (
                         "Yes"
-                        if f"{entry.title}|{getattr(entry, 'year', 'Unknown')}" in {
-                            k.split("|")[0] + "|" + k.split("|")[1] for k in processed_keys
+                        if f"{entry.title}|{getattr(entry, 'year', 'Unknown')}"
+                        in {
+                            k.split("|")[0] + "|" + k.split("|")[1]
+                            for k in processed_keys
                         }
                         else "No"
                     ),
