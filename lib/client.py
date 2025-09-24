@@ -105,7 +105,11 @@ def get_watch_history(
         mindate_dt: Optional[datetime] = None
         if date_from:
             if isinstance(date_from, str):
-                mindate_dt = datetime.strptime(date_from, "%Y-%m-%d")
+                # Support YYYY-MM-DD-HH-MM and YYYY-MM-DD
+                try:
+                    mindate_dt = datetime.strptime(date_from, "%Y-%m-%d-%H-%M")
+                except ValueError:
+                    mindate_dt = datetime.strptime(date_from, "%Y-%m-%d")
             else:
                 mindate_dt = (
                     datetime.combine(date_from, datetime.min.time())
@@ -151,13 +155,20 @@ def get_watch_history(
 
                 # Date filters
                 if date_from:
-                    df = (
-                        datetime.strptime(date_from, "%Y-%m-%d").date()
-                        if isinstance(date_from, str)
-                        else date_from
-                    )
-                    if viewed_at.date() < df:
-                        continue
+                    if isinstance(date_from, str):
+                        # If a timestamp was provided, filter at datetime precision
+                        try:
+                            df_dt = datetime.strptime(date_from, "%Y-%m-%d-%H-%M")
+                            if viewed_at < df_dt:
+                                continue
+                        except ValueError:
+                            df = datetime.strptime(date_from, "%Y-%m-%d").date()
+                            if viewed_at.date() < df:
+                                continue
+                    else:
+                        # date object
+                        if viewed_at.date() < date_from:
+                            continue
                 if date_to:
                     dt = (
                         datetime.strptime(date_to, "%Y-%m-%d").date()
@@ -293,4 +304,3 @@ def get_unwatched_movies(
         print(f"Error getting unwatched movies: {e}")
 
     return unwatched_movies
-

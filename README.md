@@ -30,6 +30,8 @@ Exporter options live in `config.yaml` (see `config.example.yaml`).
 - export: output, from, to, user, library
 - csv: rating, review, max_rows, genres, tags, rewatch, mark_rewatch
 
+Timestamped filenames use `{timestamp}` in the pattern and default to minute precision. You can set `export.timestamp_format: date` to anchor re‑imports at the start of each day (intentionally re‑exporting the boundary day).
+
 Ratings (optional): set `csv.rating: true`. Ratings convert from Plex 1–10 to Letterboxd 0.5–5.0.
 
 ### Run
@@ -86,10 +88,6 @@ csv:
 ```
 
 Notes: This tool is read‑only to Plex.
-
----
-
-<!-- Additional notes removed to keep the README compact. -->
 
 ---
 
