@@ -1,0 +1,15 @@
+# plex-letterboxd.timer
+# - Runs monthly, survives reboots
+# - The exporter uses CSV checkpointing to resume from the latest export
+
+[Unit]
+Description=Monthly Plex → Letterboxd export
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+RandomizedDelaySec=30m
+Unit=plex-letterboxd.service
+
+[Install]
+WantedBy=timers.target
