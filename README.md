@@ -7,71 +7,68 @@ Export your Plex watch history to a Letterboxd‑compatible CSV with TMDB IDs fo
 ```bash
 git clone https://github.com/brege/plex-letterboxd.git
 cd plex-letterboxd
-
-# Create an isolated environment (recommended)
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-Debian/Ubuntu note: if `python3 -m venv` is missing, install it:
+Debian/Ubuntu: if `python3 -m venv` is missing, install it:
 ```bash
 sudo apt install python3-venv
 ```
 
-### Configure
-Use either a direct Plex token or your existing Kometa config.
+The remaining commands assume you're activated in the virtual environment.
 
-Direct token
+### Configure
+
+Set your Plex token in `config.yaml`:
 ```yaml
 plex:
   url: http://your-plex-server:32400
-  token: YOUR_PLEX_TOKEN
+  token: PLEX_TOKEN
   timeout: 60
 ```
 
-For Kometa users, you may import your existing configuration to fetch
-your Plex token.
+Kometa users may source Kometa's config in this `config.yaml`:
 ```yaml
 kometa:
   config_path: ./path/to/Kometa/config.yml
 ```
 
-Exporter options live in `config.yaml` (see `config.example.yaml`).
+Exporter options are in `config.yaml`.
 - export: output, from, to, user, library
-- csv: rating, review, max_rows, genres, tags, rewatch, mark_rewatch
+- csv: rating, review, max\_rows, genres, tags, rewatch, mark\_rewatch
 
-Timestamped filenames use `{timestamp}` in the pattern and default to minute precision. You can set `export.timestamp_format: date` to anchor re‑imports at the start of each day (intentionally re‑exporting the boundary day).
-
-Ratings (optional): set `csv.rating: true`. Ratings convert from Plex 1–10 to Letterboxd 0.5–5.0.
+See `config.example.yaml` for available options.
 
 ### Run
+
 - List users
 ```bash
-python3 exporter.py --list-users
+python exporter.py --list-users
 ```
 
-- Export for a user
+- Export for a specific user
 ```bash
-python3 exporter.py --user USERNAME --output plex-export.csv
+python exporter.py --user USERNAME --output plex-export.csv
 ```
 
 - Export a date range
 ```bash
-python3 exporter.py --user USERNAME --from-date 2024-01-01 --to-date 2024-12-31 --output plex-export-2024.csv
+python exporter.py \
+    --user USERNAME \
+    --from-date 2024-01-01 \
+    --to-date 2024-12-31 \
+    --output plex-export-2024.csv
 ```
 
 Import at https://letterboxd.com/import/
 
-More options: `python3 exporter.py --help`
-
-Notes: read‑only to Plex (does not modify server data).
+See `python exporter.py --help` for CLI options.
 
 ### Output CSV Columns
 
-| Field         | Description                          |
+| Field         | Description                           |
 |:------------- |:------------------------------------- |
 | `tmdbID`      | TMDB ID for precise matching          |
 | `Title`       | Movie title                           |
@@ -81,24 +78,6 @@ Notes: read‑only to Plex (does not modify server data).
 | `Rating`      | Your rating (0.5–5.0), if enabled     |
 | `Tags`        | Genres and/or custom tags, if enabled |
 | `Rewatch`     | Whether it's a rewatch                |
-
-**Configuration**: see [`config.example.yaml`](config.example.yaml)
-
----
-
-### Ratings
-
-- Enable ratings with `csv.rating: true` in `config.yaml`.
-- Plex user ratings (1–10) are converted to Letterboxd’s 0.5–5.0 scale (half‑star rounding).
-- Unrated or 0 values export as blank.
-
-Example:
-```yaml
-csv:
-  rating: true
-```
-
-Note: This tool is read‑only to Plex. We do not import, nor have the ability currently, your Letterboxd ratings and watch history into Plex.
 
 ---
 
