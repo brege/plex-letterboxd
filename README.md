@@ -57,8 +57,8 @@ python exporter.py --user USERNAME --output plex-export.csv
 ```bash
 python exporter.py \
     --user USERNAME \
-    --from-date 2024-01-01 \
-    --to-date 2024-12-31 \
+    --after 2024-01-01 \
+    --before 2024-12-31 \
     --output plex-export-2024.csv
 ```
 

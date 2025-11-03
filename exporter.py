@@ -179,8 +179,12 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
 @click.option("--config", default="config.yaml", help="Config file path")
 @click.option("--output", help="Output CSV file (overrides config and default)")
 @click.option("--user", help="Filter by specific user (overrides config)")
-@click.option("--from-date", help="Export from date YYYY-MM-DD (overrides config)")
-@click.option("--to-date", help="Export to date YYYY-MM-DD (overrides config)")
+@click.option(
+    "--after", help="Export movies watched after date YYYY-MM-DD (overrides config)"
+)
+@click.option(
+    "--before", help="Export movies watched before date YYYY-MM-DD (overrides config)"
+)
 @click.option(
     "--cached", is_flag=True, help="Use cached CSV data instead of querying Plex API"
 )
@@ -190,7 +194,7 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
 @click.option(
     "--export-dir", help="Override export directory (defaults to config export.dir)"
 )
-def main(config, output, user, from_date, to_date, cached, list_users, export_dir):
+def main(config, output, user, after, before, cached, list_users, export_dir):
 
     # Load configuration (confuse handles normalization)
     config_data = load_config(config)
@@ -198,10 +202,8 @@ def main(config, output, user, from_date, to_date, cached, list_users, export_di
     # Handle cached data mode
     if cached:
         user_filter = _override_or_config(user, config_data["export"].get("user"))
-        date_from = _override_or_config(
-            from_date, config_data["export"].get("date_from")
-        )
-        date_to = to_date
+        date_from = _override_or_config(after, config_data["export"].get("from"))
+        date_to = before
 
         # Find existing full dataset CSV
         import glob
@@ -267,11 +269,11 @@ def main(config, output, user, from_date, to_date, cached, list_users, export_di
 
         # Get watch history - command line overrides config
         # user_filter already derived above
-        date_from = _override_or_config(from_date, config_data["export"].get("from"))
+        date_from = _override_or_config(after, config_data["export"].get("from"))
         # If no from-date, infer from last CSV checkpoint when enabled
         if not date_from and config_data.get("checkpoint", {}).get("use_csv", True):
             date_from = find_checkpoint_from_csv(config_data, user_filter, export_dir)
-        date_to = to_date
+        date_to = before
 
         print("\nExporting watch history...")
         if user_filter:
