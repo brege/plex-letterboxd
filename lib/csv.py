@@ -14,19 +14,8 @@ def transform_history(watch_history, config):
     letterboxd_config = config.get("csv", {})
 
     # Handle rewatch mode filtering
-    rewatch_mode = letterboxd_config.get("rewatch_mode", "all")
-    if rewatch_mode in [False, None, "false", "null"]:
-        # Remove all rewatches, keep only first watches
-        seen_movies = set()
-        filtered_history = []
-        for entry in sorted(watch_history, key=lambda x: x["WatchedDate"]):
-            movie_key = (entry["Title"].lower(), entry["Year"])
-            if movie_key not in seen_movies:
-                entry["Rewatch"] = "No"
-                filtered_history.append(entry)
-                seen_movies.add(movie_key)
-        watch_history = filtered_history
-    elif rewatch_mode == "first":
+    rewatch_mode = letterboxd_config.get("rewatch", "all")
+    if rewatch_mode in [False, None, "false", "null", "first"]:
         # Keep only first watch of each movie
         seen_movies = set()
         filtered_history = []
@@ -53,7 +42,7 @@ def transform_history(watch_history, config):
     # "all" mode keeps everything as-is with rewatch marking
 
     # Handle rewatch marking
-    mark_rewatches = letterboxd_config.get("mark_rewatches", True)
+    mark_rewatches = letterboxd_config.get("mark_rewatch", True)
     if not mark_rewatches:
         for entry in watch_history:
             entry["Rewatch"] = "No"
