@@ -17,6 +17,14 @@ from plexapi.server import PlexServer
 from plexapi.exceptions import PlexApiException
 
 
+def _parse_date_string(date_str: str) -> datetime:
+    """Parse date string supporting both YYYY-MM-DD and YYYY-MM-DD-HH-MM formats"""
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d-%H-%M")
+    except ValueError:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+
+
 def extract_tmdb_id_from_plex_item(plex_item) -> Optional[str]:
     """Extract TMDB ID from Plex item GUIDs (e.g., tmdb://<id>)."""
     if hasattr(plex_item, "guids") and plex_item.guids:
@@ -113,11 +121,7 @@ def get_watch_history(
         mindate_dt: Optional[datetime] = None
         if date_from:
             if isinstance(date_from, str):
-                # Support YYYY-MM-DD-HH-MM and YYYY-MM-DD
-                try:
-                    mindate_dt = datetime.strptime(date_from, "%Y-%m-%d-%H-%M")
-                except ValueError:
-                    mindate_dt = datetime.strptime(date_from, "%Y-%m-%d")
+                mindate_dt = _parse_date_string(date_from)
             else:
                 mindate_dt = (
                     datetime.combine(date_from, datetime.min.time())
@@ -168,22 +172,21 @@ def get_watch_history(
                 # Date filters
                 if date_from:
                     if isinstance(date_from, str):
-                        # If a timestamp was provided, filter at datetime precision
-                        try:
-                            df_dt = datetime.strptime(date_from, "%Y-%m-%d-%H-%M")
+                        df_dt = _parse_date_string(date_from)
+                        # Use datetime precision if time was specified,
+                        # otherwise date precision
+                        if ":" in date_from:
                             if viewed_at < df_dt:
                                 continue
-                        except ValueError:
-                            df = datetime.strptime(date_from, "%Y-%m-%d").date()
-                            if viewed_at.date() < df:
+                        else:
+                            if viewed_at.date() < df_dt.date():
                                 continue
                     else:
-                        # date object
                         if viewed_at.date() < date_from:
                             continue
                 if date_to:
                     dt = (
-                        datetime.strptime(date_to, "%Y-%m-%d").date()
+                        _parse_date_string(date_to).date()
                         if isinstance(date_to, str)
                         else date_to
                     )

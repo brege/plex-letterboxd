@@ -33,9 +33,47 @@ import yaml
 
 
 def load_config(path: str = "config.yaml") -> Dict[str, Any]:
+    # Load raw YAML first
     with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    return data
+        raw_config = yaml.safe_load(f) or {}
+    
+    # Apply defaults manually for a simpler approach
+    defaults = {
+        'export': {
+            'output': None,
+            'from': None,
+            'to': None,
+            'user': None,
+            'library': 'Movies',
+            'dir': 'data',
+            'file_pattern': 'plex-watched-{user}-{timestamp}.csv',
+            'timestamp_format': 'datetime',
+        },
+        'csv': {
+            'rating': False,
+            'max_rows': 1900,
+            'genres': False,
+            'tags': None,
+            'rewatch': 'all',
+            'mark_rewatch': True,
+        },
+        'checkpoint': {
+            'use_csv': True,
+            'path': '.last-run.json',
+        },
+    }
+    
+    # Deep merge defaults with user config
+    result = {}
+    for section, section_defaults in defaults.items():
+        result[section] = {**section_defaults, **raw_config.get(section, {})}
+    
+    # Add non-default sections as-is (plex, kometa)
+    for key in raw_config:
+        if key not in defaults:
+            result[key] = raw_config[key]
+    
+    return result
 
 
 def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -81,48 +119,3 @@ def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
     return extracted
 
 
-def normalize_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    out: Dict[str, Any] = dict(config)  # shallow copy is fine
-
-    # Normalize export block
-    export_in = dict(config.get("export", {}) or {})
-    out_export = {
-        "output": export_in.get("output"),
-        "from": export_in.get("from"),
-        "to": export_in.get("to"),
-        "user": export_in.get("user"),
-        "library": export_in.get("library", "Movies"),
-        "dir": export_in.get("dir", "data"),
-        "file_pattern": export_in.get(
-            "file_pattern", "plex-watched-{user}-{timestamp}.csv"
-        ),
-        "timestamp_format": export_in.get("timestamp_format", "datetime"),
-    }
-    out["export"] = out_export
-
-    # Normalize CSV/Letterboxd block
-    lb_in = dict(config.get("csv", {}) or {})
-    out_csv = {
-        "rating": lb_in.get("rating", False),
-        "max_rows": lb_in.get("max_rows", 1900),
-        "genres": lb_in.get("genres", False),
-        "tags": lb_in.get("tags"),
-        "rewatch": lb_in.get("rewatch", "all"),
-        "mark_rewatch": lb_in.get("mark_rewatch", True),
-    }
-    out["csv"] = out_csv
-
-    # Checkpoint settings
-    cp_in = dict(config.get("checkpoint", {}) or {})
-    out_cp = {
-        "use_csv": cp_in.get("use_csv", True),
-        "path": cp_in.get("path", ".last-run.json"),
-    }
-    out["checkpoint"] = out_cp
-
-    # Clamp timestamp_format
-    tf = out["export"].get("timestamp_format", "datetime")
-    if tf not in ("datetime", "date"):
-        out["export"]["timestamp_format"] = "datetime"
-
-    return out

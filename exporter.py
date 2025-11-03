@@ -4,7 +4,7 @@ Plex to Letterboxd Export Script
 Exports Plex watch history to Letterboxd-compatible CSV format
 """
 
-import argparse
+import click
 from datetime import datetime
 from lib.client import (
     connect_to_plex,
@@ -17,9 +17,13 @@ from lib.csv import (
     transform_history,
     write_csv,
 )
-from lib.config import load_config, extract_plex_config, normalize_config
+from lib.config import load_config, extract_plex_config
 
-# Config helpers are provided by lib.config
+
+def _override_or_config(arg_value, config_value):
+    """Return CLI arg if provided, otherwise config value"""
+    return arg_value if arg_value is not None else config_value
+
 
 # Moved: process_watch_history_by_config, export_to_csv (see lib/csv.py)
 
@@ -172,58 +176,26 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
     return sliced_data
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Export Plex watch history to Letterboxd CSV"
-    )
-    parser.add_argument("--config", default="config.yaml", help="Config file path")
-    parser.add_argument(
-        "--output", help="Output CSV file (overrides config and default)"
-    )
-    parser.add_argument("--user", help="Filter by specific user (overrides config)")
-    parser.add_argument(
-        "--from-date", help="Export from date YYYY-MM-DD (overrides config)"
-    )
-    parser.add_argument(
-        "--to-date", help="Export to date YYYY-MM-DD (overrides config)"
-    )
-    parser.add_argument(
-        "--compare",
-        action="store_true",
-        help="Show unwatched vs watched movie comparison",
-    )
-    parser.add_argument(
-        "--cached",
-        action="store_true",
-        help="Use cached CSV data instead of querying Plex API",
-    )
-    parser.add_argument(
-        "--list-users",
-        action="store_true",
-        help="List available Plex users before export",
-    )
-    parser.add_argument(
-        "--export-dir",
-        help="Override export directory (defaults to config export.dir)",
-    )
+@click.command()
+@click.option("--config", default="config.yaml", help="Config file path")
+@click.option("--output", help="Output CSV file (overrides config and default)")
+@click.option("--user", help="Filter by specific user (overrides config)")
+@click.option("--from-date", help="Export from date YYYY-MM-DD (overrides config)")
+@click.option("--to-date", help="Export to date YYYY-MM-DD (overrides config)")
+@click.option("--compare", is_flag=True, help="Show unwatched vs watched movie comparison")
+@click.option("--cached", is_flag=True, help="Use cached CSV data instead of querying Plex API")
+@click.option("--list-users", is_flag=True, help="List available Plex users before export")
+@click.option("--export-dir", help="Override export directory (defaults to config export.dir)")
+def main(config, output, user, from_date, to_date, compare, cached, list_users, export_dir):
 
-    args = parser.parse_args()
-
-    # Load and normalize configuration
-    config = load_config(args.config)
-    config = normalize_config(config)
+    # Load configuration (confuse handles normalization)
+    config_data = load_config(config)
 
     # Handle cached data mode
-    if args.cached:
-        user_filter = (
-            args.user if args.user is not None else config["export"].get("user")
-        )
-        date_from = (
-            args.from_date
-            if args.from_date is not None
-            else config["export"].get("date_from")
-        )
-        date_to = args.to_date
+    if cached:
+        user_filter = _override_or_config(user, config_data["export"].get("user"))
+        date_from = _override_or_config(from_date, config_data["export"].get("date_from"))
+        date_to = to_date
 
         # Find existing full dataset CSV
         import glob
@@ -255,10 +227,10 @@ def main():
 
         # Process cached data with config options
         if watch_history:
-            watch_history = transform_history(watch_history, config)
+            watch_history = transform_history(watch_history, config_data)
     else:
         # Extract Plex configuration (supports Kometa or direct config)
-        plex_config = extract_plex_config(config)
+        plex_config = extract_plex_config(config_data)
 
         if not plex_config or not plex_config.get("token"):
             print("Error: No valid Plex configuration found")
@@ -271,33 +243,27 @@ def main():
 
         # Get users (only list when no user filter provided, unless --list-users is set)
         users = get_users(server)
-        user_filter = (
-            args.user if args.user is not None else config["export"].get("user")
-        )
-        if args.list_users or not user_filter:
+        user_filter = _override_or_config(user, config_data["export"].get("user"))
+        if list_users or not user_filter:
             print("\nAvailable users:")
             for user in users:
                 print(f"  - {user['title']} ({user['username']})")
             # If explicitly listing users, exit before exporting
-            if args.list_users:
+            if list_users:
                 return
 
         # Get Movies library
-        library = get_movies_library(server, config["export"].get("library", "Movies"))
+        library = get_movies_library(server, config_data["export"].get("library", "Movies"))
         if not library:
             return
 
         # Get watch history - command line overrides config
         # user_filter already derived above
-        date_from = (
-            args.from_date
-            if args.from_date is not None
-            else config["export"].get("from")
-        )
+        date_from = _override_or_config(from_date, config_data["export"].get("from"))
         # If no from-date, infer from last CSV checkpoint when enabled
-        if not date_from and config.get("checkpoint", {}).get("use_csv", True):
-            date_from = find_checkpoint_from_csv(config, user_filter, args.export_dir)
-        date_to = args.to_date
+        if not date_from and config_data.get("checkpoint", {}).get("use_csv", True):
+            date_from = find_checkpoint_from_csv(config_data, user_filter, export_dir)
+        date_to = to_date
 
         print("\nExporting watch history...")
         if user_filter:
@@ -313,15 +279,15 @@ def main():
 
     # Process watch history based on config options
     if watch_history:
-        watch_history = transform_history(watch_history, config)
+        watch_history = transform_history(watch_history, config_data)
 
     if not watch_history:
         print("No watch history found matching criteria")
-        if not args.compare:
+        if not compare:
             return
 
     # Show comparison if requested
-    if args.compare:
+    if compare:
         print(f"\n--- COMPARISON FOR USER: {user_filter or 'ALL'} ---")
 
         # Get watched movie titles
@@ -357,24 +323,24 @@ def main():
         all_movies = watched_titles | unwatched_titles
         print(f"\nTotal unique movies in library: {len(all_movies)}")
 
-        if not args.output:
+        if not output:
             return  # Don't export if just comparing
 
     if not watch_history:
         return
 
     # Determine output filename with smart defaults
-    if args.output:
-        output_file = args.output
-    elif config["export"].get("output"):
-        output_file = config["export"]["output"]
+    if output:
+        output_file = output
+    elif config_data["export"].get("output"):
+        output_file = config_data["export"]["output"]
     else:
-        output_file = build_output_path(config, user_filter, args.export_dir)
+        output_file = build_output_path(config_data, user_filter, export_dir)
     write_csv(
         watch_history,
         output_file,
-        include_rating=config["csv"]["rating"],
-        max_films=config["csv"]["max_rows"],
+        include_rating=config_data["csv"]["rating"],
+        max_films=config_data["csv"]["max_rows"],
     )
 
     print(f"\nExport complete! Import the file '{output_file}' to Letterboxd.")
