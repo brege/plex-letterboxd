@@ -36,43 +36,43 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
     # Load raw YAML first
     with open(path, "r", encoding="utf-8") as f:
         raw_config = yaml.safe_load(f) or {}
-    
+
     # Apply defaults manually for a simpler approach
     defaults = {
-        'export': {
-            'output': None,
-            'from': None,
-            'to': None,
-            'user': None,
-            'library': 'Movies',
-            'dir': 'data',
-            'file_pattern': 'plex-watched-{user}-{timestamp}.csv',
-            'timestamp_format': 'datetime',
+        "export": {
+            "output": None,
+            "from": None,
+            "to": None,
+            "user": None,
+            "library": "Movies",
+            "dir": "data",
+            "file_pattern": "plex-watched-{user}-{timestamp}.csv",
+            "timestamp_format": "datetime",
         },
-        'csv': {
-            'rating': False,
-            'max_rows': 1900,
-            'genres': False,
-            'tags': None,
-            'rewatch': 'all',
-            'mark_rewatch': True,
+        "csv": {
+            "rating": False,
+            "max_rows": 1900,
+            "genres": False,
+            "tags": None,
+            "rewatch": "all",
+            "mark_rewatch": True,
         },
-        'checkpoint': {
-            'use_csv': True,
-            'path': '.last-run.json',
+        "checkpoint": {
+            "use_csv": True,
+            "path": ".last-run.json",
         },
     }
-    
+
     # Deep merge defaults with user config
     result = {}
     for section, section_defaults in defaults.items():
         result[section] = {**section_defaults, **raw_config.get(section, {})}
-    
+
     # Add non-default sections as-is (plex, kometa)
     for key in raw_config:
         if key not in defaults:
             result[key] = raw_config[key]
-    
+
     return result
 
 
@@ -117,5 +117,3 @@ def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
         print(f"Overriding Plex URL: {extracted['url']}")
 
     return extracted
-
-

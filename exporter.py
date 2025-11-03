@@ -11,7 +11,6 @@ from lib.client import (
     get_users,
     get_movies_library,
     get_watch_history,
-    get_unwatched_movies,
 )
 from lib.csv import (
     transform_history,
@@ -182,11 +181,16 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
 @click.option("--user", help="Filter by specific user (overrides config)")
 @click.option("--from-date", help="Export from date YYYY-MM-DD (overrides config)")
 @click.option("--to-date", help="Export to date YYYY-MM-DD (overrides config)")
-@click.option("--compare", is_flag=True, help="Show unwatched vs watched movie comparison")
-@click.option("--cached", is_flag=True, help="Use cached CSV data instead of querying Plex API")
-@click.option("--list-users", is_flag=True, help="List available Plex users before export")
-@click.option("--export-dir", help="Override export directory (defaults to config export.dir)")
-def main(config, output, user, from_date, to_date, compare, cached, list_users, export_dir):
+@click.option(
+    "--cached", is_flag=True, help="Use cached CSV data instead of querying Plex API"
+)
+@click.option(
+    "--list-users", is_flag=True, help="List available Plex users before export"
+)
+@click.option(
+    "--export-dir", help="Override export directory (defaults to config export.dir)"
+)
+def main(config, output, user, from_date, to_date, cached, list_users, export_dir):
 
     # Load configuration (confuse handles normalization)
     config_data = load_config(config)
@@ -194,7 +198,9 @@ def main(config, output, user, from_date, to_date, compare, cached, list_users, 
     # Handle cached data mode
     if cached:
         user_filter = _override_or_config(user, config_data["export"].get("user"))
-        date_from = _override_or_config(from_date, config_data["export"].get("date_from"))
+        date_from = _override_or_config(
+            from_date, config_data["export"].get("date_from")
+        )
         date_to = to_date
 
         # Find existing full dataset CSV
@@ -253,7 +259,9 @@ def main(config, output, user, from_date, to_date, compare, cached, list_users, 
                 return
 
         # Get Movies library
-        library = get_movies_library(server, config_data["export"].get("library", "Movies"))
+        library = get_movies_library(
+            server, config_data["export"].get("library", "Movies")
+        )
         if not library:
             return
 
@@ -283,50 +291,6 @@ def main(config, output, user, from_date, to_date, compare, cached, list_users, 
 
     if not watch_history:
         print("No watch history found matching criteria")
-        if not compare:
-            return
-
-    # Show comparison if requested
-    if compare:
-        print(f"\n--- COMPARISON FOR USER: {user_filter or 'ALL'} ---")
-
-        # Get watched movie titles
-        watched_titles = set()
-        for watch in watch_history:
-            watched_titles.add(f"{watch['Title']} ({watch['Year']})")
-
-        # Get unwatched movies
-        unwatched_movies = get_unwatched_movies(server, library, user_filter)
-        unwatched_titles = set()
-        for movie in unwatched_movies:
-            unwatched_titles.add(f"{movie['Title']} ({movie['Year']})")
-
-        print(f"\nWatched movies: {len(watched_titles)}")
-        print(f"Unwatched movies: {len(unwatched_titles)}")
-
-        # Show some examples
-        if watched_titles:
-            print("\nFirst 10 watched movies:")
-            for i, title in enumerate(sorted(watched_titles)):
-                if i >= 10:
-                    break
-                print(f"  - {title}")
-
-        if unwatched_titles:
-            print("\nFirst 10 unwatched movies:")
-            for i, title in enumerate(sorted(unwatched_titles)):
-                if i >= 10:
-                    break
-                print(f"  - {title}")
-
-        # Set operations
-        all_movies = watched_titles | unwatched_titles
-        print(f"\nTotal unique movies in library: {len(all_movies)}")
-
-        if not output:
-            return  # Don't export if just comparing
-
-    if not watch_history:
         return
 
     # Determine output filename with smart defaults
