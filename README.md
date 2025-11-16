@@ -18,8 +18,6 @@ cd plex-letterboxd
 pip install .
 ```
 
-The remaining commands assume you're activated in the virtual environment `source .venv/bin/activate`.
-
 ### Configure
 
 There are two ways to include your Plex token.
@@ -48,17 +46,17 @@ See [`config.example.yaml`](config.example.yaml) for available options.
 
 - List users
 ```bash
-plex-letterbox --list-users
+plex-letterboxd --list-users
 ```
 
 - Export for a specific user
 ```bash
-plex-letterbox --user USERNAME --output plex-export.csv
+plex-letterboxd --user USERNAME --output plex-export.csv
 ```
 
 - Export a date range
 ```bash
-plex-letterbox \
+plex-letterboxd \
     --user USERNAME \
     --after 2024-01-01 \
     --before 2024-12-31 \
@@ -67,7 +65,7 @@ plex-letterbox \
 
 Import at https://letterboxd.com/import/
 
-See `plex-letterbox --help` for CLI options.
+See `plex-letterboxd --help` for CLI options.
 
 ### Output CSV Columns
 
@@ -86,21 +84,20 @@ See `plex-letterbox --help` for CLI options.
 
 ## Automated Exports
 
-Set up a [systemd timer](https://www.freedesktop.org/software/systemd/man/systemd.timer.html) for automated monthly exports with CSV checkpointing:
+Set up a [systemd timer](https://www.freedesktop.org/software/systemd/man/systemd.timer.html) for automated monthly exports with CSV checkpointing.
 
-### Install Timer
+### Setup Timer
 
-Edit the cadence to your liking. The included timer runs monthly.
-
+Monthly
 ```bash
-sudo cp systemd/plex-letterboxd.* /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable plex-letterboxd.timer
-sudo systemctl start plex-letterboxd.timer
+bash <(curl -s https://raw.githubusercontent.com/brege/plex-letterboxd/refs/heads/main/systemd/install.sh)
 ```
 
-This timer will run the exporter once a month, producing a new, monthly CSV file in the configured `data/` directory.  You can run this on your Plex machine or other machine since the exporter only queries the Plex API.
+Or weekly
+```bash
+bash <(curl -s https://raw.githubusercontent.com/brege/plex-letterboxd/refs/heads/main/systemd/install.sh) weekly
+```
 
----
+The timer will run the exporter on your chosen schedule, producing CSV files in `~/.config/plex-letterboxd/data/`. Configure the output data directory via `config.yaml` to change.
 
-[MIT License](LICENSE)
+I suggest running this on the same machine Plex runs on, since it's typically always online.

@@ -1,0 +1,15 @@
+[Unit]
+Description=Plex to Letterboxd exporter (%i)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__user__
+Group=__group__
+Environment="PATH=/home/__user__/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/bin/env plex-letterboxd
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

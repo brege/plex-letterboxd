@@ -1,0 +1,11 @@
+[Unit]
+Description=Plex to Letterboxd export timer (%i)
+
+[Timer]
+OnCalendar=%i
+Persistent=true
+RandomizedDelaySec=30m
+Unit=plex-letterboxd@%i.service
+
+[Install]
+WantedBy=timers.target
