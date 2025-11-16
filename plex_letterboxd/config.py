@@ -29,6 +29,8 @@ csv:
 from __future__ import annotations
 
 from typing import Any, Dict
+import os
+import click
 import yaml
 
 
@@ -45,7 +47,7 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
             "before": None,
             "user": None,
             "library": "Movies",
-            "dir": "data",
+            "dir": os.path.join(click.get_app_dir("plex-letterboxd"), "data"),
             "file_pattern": "plex-watched-{user}-{timestamp}.csv",
             "timestamp_format": "datetime",
         },

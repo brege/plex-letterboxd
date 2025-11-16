@@ -5,18 +5,19 @@ Exports Plex watch history to Letterboxd-compatible CSV format
 """
 
 import click
+import os
 from datetime import datetime
-from lib.client import (
+from .client import (
     connect_to_plex,
     get_users,
     get_movies_library,
     get_watch_history,
 )
-from lib.csv import (
+from .csv import (
     transform_history,
     write_csv,
 )
-from lib.config import load_config, extract_plex_config
+from .config import load_config, extract_plex_config
 
 
 def _override_or_config(arg_value, config_value):
@@ -176,7 +177,15 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
 
 
 @click.command()
-@click.option("--config", default="config.yaml", help="Config file path")
+@click.option(
+    "--config",
+    type=click.Path(),
+    default=lambda: (
+        (xdg := os.path.join(click.get_app_dir("plex-letterboxd"), "config.yaml")),
+        xdg if os.path.exists(xdg) else "config.yaml",
+    )[1],
+    help="Config file path (default: XDG config dir or ./config.yaml)",
+)
 @click.option("--output", help="Output CSV file (overrides config and default)")
 @click.option("--user", help="Filter by specific user (overrides config)")
 @click.option(

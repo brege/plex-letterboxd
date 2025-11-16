@@ -1,3 +1,0 @@
-plexapi==4.17.1
-PyYAML==6.0.2
-click==8.1.7

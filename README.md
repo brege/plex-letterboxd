@@ -4,17 +4,18 @@ Exports Plex watch history and ratings to a Letterboxd‑compatible CSV file usi
 
 ### Install
 
+From [PyPI](https://pypi.org/project/plex-letterboxd/):
+
+```bash
+pip install plex-letterboxd
+```
+
+From source:
+
 ```bash
 git clone https://github.com/brege/plex-letterboxd.git
 cd plex-letterboxd
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Debian/Ubuntu: if `python3 -m venv` is missing, install it:
-```bash
-sudo apt install python3-venv
+pip install .
 ```
 
 The remaining commands assume you're activated in the virtual environment `source .venv/bin/activate`.
@@ -47,17 +48,17 @@ See [`config.example.yaml`](config.example.yaml) for available options.
 
 - List users
 ```bash
-python exporter.py --list-users
+plex-letterbox --list-users
 ```
 
 - Export for a specific user
 ```bash
-python exporter.py --user USERNAME --output plex-export.csv
+plex-letterbox --user USERNAME --output plex-export.csv
 ```
 
 - Export a date range
 ```bash
-python exporter.py \
+plex-letterbox \
     --user USERNAME \
     --after 2024-01-01 \
     --before 2024-12-31 \
@@ -66,7 +67,7 @@ python exporter.py \
 
 Import at https://letterboxd.com/import/
 
-See `python exporter.py --help` for CLI options.
+See `plex-letterbox --help` for CLI options.
 
 ### Output CSV Columns
 
