@@ -18,8 +18,8 @@ plex:
 
 export:
   output: null        # Optional: specify custom filename, defaults to plex-watched-{user}-{date}.csv
-  from: null          # YYYY-MM-DD, null for all history
-  to: null            # YYYY-MM-DD, optional upper bound
+  after: null         # YYYY-MM-DD, null for all history
+  before: null        # YYYY-MM-DD, optional upper bound
   user: null          # Plex username, or null for all users
   library: Movies
   dir: data           # Directory to store exports
@@ -42,5 +42,5 @@ csv:
 
 # Checkpointing (idempotent runs)
 checkpoint:
-  use_csv: true           # Infer next --from-date from latest CSV in export.dir
+  use_csv: true           # Infer next --after date from latest CSV in export.dir
   path: .last-run.json    # Only used if use_csv: false

@@ -77,7 +77,7 @@ def find_checkpoint_from_csv(
     config, user_filter: str | None, export_dir_override: str | None
 ):
     """
-    Find latest CSV for the user in export.dir and return a from-date
+    Find latest CSV for the user in export.dir and return an after-date
     string (YYYY-MM-DD-HH-MM).
     """
     import os
@@ -202,8 +202,8 @@ def main(config, output, user, after, before, cached, list_users, export_dir):
     # Handle cached data mode
     if cached:
         user_filter = _override_or_config(user, config_data["export"].get("user"))
-        date_from = _override_or_config(after, config_data["export"].get("from"))
-        date_to = before
+        date_from = _override_or_config(after, config_data["export"].get("after"))
+        date_to = _override_or_config(before, config_data["export"].get("before"))
 
         # Find existing full dataset CSV
         import glob
@@ -269,11 +269,11 @@ def main(config, output, user, after, before, cached, list_users, export_dir):
 
         # Get watch history - command line overrides config
         # user_filter already derived above
-        date_from = _override_or_config(after, config_data["export"].get("from"))
+        date_from = _override_or_config(after, config_data["export"].get("after"))
         # If no from-date, infer from last CSV checkpoint when enabled
         if not date_from and config_data.get("checkpoint", {}).get("use_csv", True):
             date_from = find_checkpoint_from_csv(config_data, user_filter, export_dir)
-        date_to = before
+        date_to = _override_or_config(before, config_data["export"].get("before"))
 
         print("\nExporting watch history...")
         if user_filter:

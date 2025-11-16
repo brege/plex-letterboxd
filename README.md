@@ -1,6 +1,6 @@
 ## Plex to Letterboxd Exporter
 
-Export your Plex watch history and ratings to a Letterboxd‑compatible CSV file using TMDB IDs for reliable matching.
+Exports Plex watch history and ratings to a Letterboxd‑compatible CSV file using TMDB IDs for reliable matching.
 
 ### Install
 
@@ -21,7 +21,9 @@ The remaining commands assume you're activated in the virtual environment `sourc
 
 ### Configure
 
-Set your Plex token in `config.yaml`:
+There are two ways to include your Plex token.
+
+**Option 1:** Set your Plex token in `config.yaml`:
 ```yaml
 plex:
   url: http://your-plex-server:32400
@@ -29,14 +31,14 @@ plex:
   timeout: 60
 ```
 
-Kometa users may source Kometa's config in this project's `config.yaml`:
+**Option 2:** Kometa users may source Kometa's config in this project's `config.yaml`:
 ```yaml
 kometa:
   config_path: ./path/to/Kometa/config.yml
 ```
 
 Exporter options are in `config.yaml`.
-- export: output, from, to, user, library
+- export: output, after, before, user, library
 - csv: rating, review, max\_rows, genres, tags, rewatch, mark\_rewatch
 
 See [`config.example.yaml`](config.example.yaml) for available options.
@@ -96,7 +98,7 @@ sudo systemctl enable plex-letterboxd.timer
 sudo systemctl start plex-letterboxd.timer
 ```
 
-This timer will run the the exporter once a month, producing a new, monthly CSV file in the configured `data/` directory.  You can run this on your Plex machine or other machine since the exporter only queries the Plex API.
+This timer will run the exporter once a month, producing a new, monthly CSV file in the configured `data/` directory.  You can run this on your Plex machine or other machine since the exporter only queries the Plex API.
 
 ---
 

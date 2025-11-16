@@ -9,8 +9,8 @@ Canonical schema (after normalization):
 
 export:
   output: str|None
-  from: str|None           # YYYY-MM-DD
-  to: str|None             # YYYY-MM-DD
+  after: str|None          # YYYY-MM-DD
+  before: str|None         # YYYY-MM-DD
   user: str|None
   library: str             # default: Movies
   dir: str                 # default: data
@@ -41,8 +41,8 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
     defaults = {
         "export": {
             "output": None,
-            "from": None,
-            "to": None,
+            "after": None,
+            "before": None,
             "user": None,
             "library": "Movies",
             "dir": "data",
