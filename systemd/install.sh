@@ -20,6 +20,16 @@ esac
 
 echo "Installing plex-letterboxd systemd service and timer ($SCHEDULE)..."
 
+echo "Stopping any existing plex-letterboxd units for schedule '$SCHEDULE'..."
+sudo systemctl stop "plex-letterboxd@${SCHEDULE}.timer" "plex-letterboxd@${SCHEDULE}.service" 2>/dev/null || true
+sudo systemctl disable "plex-letterboxd@${SCHEDULE}.timer" "plex-letterboxd@${SCHEDULE}.service" 2>/dev/null || true
+
+echo "Removing existing unit files (if present)..."
+sudo rm -f /etc/systemd/system/plex-letterboxd@.service /etc/systemd/system/plex-letterboxd@.timer
+
+echo "Reloading systemd daemon after removal..."
+sudo systemctl daemon-reload
+
 # Download service and timer templates
 curl -o plex-letterboxd@.service https://raw.githubusercontent.com/brege/plex-letterboxd/refs/heads/main/systemd/plex-letterboxd%40.service
 curl -o plex-letterboxd@.timer https://raw.githubusercontent.com/brege/plex-letterboxd/refs/heads/main/systemd/plex-letterboxd%40.timer
