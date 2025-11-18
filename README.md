@@ -101,3 +101,7 @@ bash <(curl -s https://raw.githubusercontent.com/brege/plex-letterboxd/refs/head
 The timer will run the exporter on your chosen schedule, producing CSV files in `~/.config/plex-letterboxd/data/`. Configure the output data directory via `config.yaml` to change.
 
 I suggest running this on the same machine Plex runs on, since it's typically always online.
+
+## License
+
+[GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html)
