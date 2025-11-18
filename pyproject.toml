@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "plex-letterboxd"
-version = "0.2"
+version = "0.3"
 description = "Export Plex watch history to Letterboxd-compatible CSV format"
 readme = "README.md"
 license = "MIT"
@@ -35,4 +35,4 @@ plex-letterboxd = "plex_letterboxd.cli:main"
 packages = ["plex_letterboxd"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/config.example.yaml", "/systemd"]
+include = ["/plex_letterboxd", "/config.example.yaml", "/systemd"]

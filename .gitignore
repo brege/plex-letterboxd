@@ -6,3 +6,4 @@ config.y*ml
 
 # python artifacts
 __pycache__
+dist

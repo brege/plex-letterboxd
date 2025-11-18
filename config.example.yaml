@@ -22,7 +22,7 @@ export:
   before: null        # YYYY-MM-DD, optional upper bound
   user: null          # Plex username, or null for all users
   library: Movies
-  dir: data           # Directory to store exports
+  dir: data           # Directory to store exports (default: CWD/data)
   file_pattern: plex-watched-{user}-{timestamp}.csv  # {user}, {timestamp} = YYYY-MM-DD-HH-MM
   timestamp_format: datetime  # datetime (YYYY-MM-DD-HH-MM) or date (YYYY-MM-DD)
 
