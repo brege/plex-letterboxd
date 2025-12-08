@@ -35,11 +35,14 @@ import yaml
 
 
 def load_config(path: str = "config.yaml") -> Dict[str, Any]:
+    # Get the XDG config root
+    config_root = click.get_app_dir("plex-letterboxd")
+
     # Load raw YAML first
     with open(path, "r", encoding="utf-8") as f:
         raw_config = yaml.safe_load(f) or {}
 
-    # Apply defaults manually for a simpler approach
+    # Apply defaults
     defaults = {
         "export": {
             "output": None,
@@ -47,7 +50,7 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
             "before": None,
             "user": None,
             "library": "Movies",
-            "dir": os.path.join(click.get_app_dir("plex-letterboxd"), "data"),
+            "dir": os.path.join(config_root, "data"),
             "file_pattern": "plex-watched-{user}-{timestamp}.csv",
             "timestamp_format": "datetime",
         },
@@ -74,6 +77,12 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
     for key in raw_config:
         if key not in defaults:
             result[key] = raw_config[key]
+
+    # Resolve relative paths in export.dir relative to config root
+    if "export" in result:
+        dir_path = result["export"]["dir"]
+        if not os.path.isabs(dir_path):
+            result["export"]["dir"] = os.path.join(config_root, dir_path)
 
     return result
 
