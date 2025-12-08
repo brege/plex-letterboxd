@@ -10,12 +10,26 @@ From [PyPI](https://pypi.org/project/plex-letterboxd/):
 pip install plex-letterboxd
 ```
 
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv pip install plex-letterboxd
+```
+
 From source:
 
 ```bash
 git clone https://github.com/brege/plex-letterboxd.git
 cd plex-letterboxd
 pip install .
+```
+
+Or with uv:
+
+```bash
+git clone https://github.com/brege/plex-letterboxd.git
+cd plex-letterboxd
+uv pip install .
 ```
 
 ### Configure

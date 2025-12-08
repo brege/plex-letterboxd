@@ -4,20 +4,22 @@ Plex to Letterboxd Export Script
 Exports Plex watch history to Letterboxd-compatible CSV format
 """
 
-import click
 import os
 from datetime import datetime
+
+import click
+
 from .client import (
     connect_to_plex,
-    get_users,
     get_movies_library,
+    get_users,
     get_watch_history,
 )
+from .config import extract_plex_config, load_config
 from .csv import (
     transform_history,
     write_csv,
 )
-from .config import load_config, extract_plex_config
 
 
 def _override_or_config(arg_value, config_value):
@@ -81,8 +83,8 @@ def find_checkpoint_from_csv(
     Find latest CSV for the user in export.dir and return an after-date
     string (YYYY-MM-DD-HH-MM).
     """
-    import os
     import glob
+    import os
 
     export_dir = export_dir_override or config["export"].get("dir", "data")
     user_part = user_filter if user_filter else "all"
@@ -121,7 +123,7 @@ def load_cached_data(file_path):
     from datetime import datetime
 
     cached_data = []
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             try:
@@ -204,7 +206,6 @@ def slice_cached_data(cached_data, date_from=None, date_to=None):
     "--export-dir", help="Override export directory (defaults to config export.dir)"
 )
 def main(config, output, user, after, before, cached, list_users, export_dir):
-
     # Load configuration (confuse handles normalization)
     config_data = load_config(config)
 

@@ -36,3 +36,13 @@ packages = ["plex_letterboxd"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/plex_letterboxd", "/config.example.yaml", "/systemd"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E203"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = true

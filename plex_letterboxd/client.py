@@ -11,10 +11,10 @@ Step 1 of refactor: Extract API-facing logic from exporter.py
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
-from plexapi.server import PlexServer
 from plexapi.exceptions import PlexApiException
+from plexapi.server import PlexServer
 
 
 def _parse_date_string(date_str: str) -> datetime:
@@ -38,7 +38,7 @@ def extract_tmdb_id_from_plex_item(plex_item) -> Optional[str]:
     return None
 
 
-def connect_to_plex(plex_config: Dict[str, Any]) -> Optional[PlexServer]:
+def connect_to_plex(plex_config: dict[str, Any]) -> Optional[PlexServer]:
     """Connect to Plex server using provided configuration dict."""
     try:
         server = PlexServer(
@@ -53,10 +53,10 @@ def connect_to_plex(plex_config: Dict[str, Any]) -> Optional[PlexServer]:
         return None
 
 
-def get_users(server: PlexServer) -> List[Dict[str, Any]]:
+def get_users(server: PlexServer) -> list[dict[str, Any]]:
     """Return list of Plex users (owner + managed)."""
     try:
-        users: List[Dict[str, Any]] = []
+        users: list[dict[str, Any]] = []
         account = server.myPlexAccount()
         users.append(
             {
@@ -107,12 +107,12 @@ def get_watch_history(
     user_filter: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Get watch history for movies using fast server-side filtering,
     plus lazy metadata lookups.
     """
-    watch_history: List[Dict[str, Any]] = []
+    watch_history: list[dict[str, Any]] = []
 
     try:
         target_account_id = _resolve_account_id(server, user_filter)
@@ -147,7 +147,7 @@ def get_watch_history(
         print(f"Found {len(movie_history)} movie watch entries")
 
         # Lazy metadata cache
-        movie_cache: Dict[str, Dict[str, Any]] = {}
+        movie_cache: dict[str, dict[str, Any]] = {}
 
         print("Processing movie history entries...")
         processed_keys = set()

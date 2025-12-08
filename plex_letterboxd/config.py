@@ -28,18 +28,19 @@ csv:
 
 from __future__ import annotations
 
-from typing import Any, Dict
 import os
+from typing import Any
+
 import click
 import yaml
 
 
-def load_config(path: str = "config.yaml") -> Dict[str, Any]:
+def load_config(path: str = "config.yaml") -> dict[str, Any]:
     # Get the XDG config root
     config_root = click.get_app_dir("plex-letterboxd")
 
     # Load raw YAML first
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         raw_config = yaml.safe_load(f) or {}
 
     # Apply defaults
@@ -87,12 +88,12 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
     return result
 
 
-def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
+def extract_plex_config(config: dict[str, Any]) -> dict[str, Any] | None:
     # Prefer Kometa token if configured
     if "kometa" in config and config["kometa"].get("config_path"):
         kometa_config_path = config["kometa"]["config_path"]
         try:
-            with open(kometa_config_path, "r", encoding="utf-8") as f:
+            with open(kometa_config_path, encoding="utf-8") as f:
                 kometa = yaml.safe_load(f) or {}
             plex_cfg = kometa.get("plex", {})
             extracted = {
@@ -114,10 +115,8 @@ def extract_plex_config(config: Dict[str, Any]) -> Dict[str, Any] | None:
     else:
         print("Error: No valid Plex configuration found.")
         print(
-            (
-                "Please configure either 'kometa.config_path' or 'plex.token' "
-                "in your config file."
-            )
+            "Please configure either 'kometa.config_path' or 'plex.token' "
+            "in your config file."
         )
         return None
 
