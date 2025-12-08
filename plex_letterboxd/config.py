@@ -54,6 +54,7 @@ def load_config(path: str = "config.yaml") -> dict[str, Any]:
             "dir": os.path.join(config_root, "data"),
             "file_pattern": "plex-watched-{user}-{timestamp}.csv",
             "timestamp_format": "datetime",
+            "symlink_location": None,
         },
         "csv": {
             "rating": False,

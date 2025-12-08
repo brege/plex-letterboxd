@@ -25,6 +25,7 @@ export:
   dir: data           # Directory to store exports (default: CWD/data)
   file_pattern: plex-watched-{user}-{timestamp}.csv  # {user}, {timestamp} = YYYY-MM-DD-HH-MM
   timestamp_format: datetime  # datetime (YYYY-MM-DD-HH-MM) or date (YYYY-MM-DD)
+  symlink_location: null  # Optional: symlink exported CSV to this directory (e.g., ~/Downloads)
 
 # Letterboxd CSV format requirements:
 # - UTF-8 encoding

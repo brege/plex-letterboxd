@@ -58,6 +58,29 @@ def build_output_path(
     return os.path.join(export_dir, filename)
 
 
+def _symlink(output_file, config):
+    """Create symlink to CSV if configured"""
+    symlink_location = config["export"].get("symlink_location")
+    if not symlink_location:
+        return
+
+    try:
+        expanded_location = os.path.expanduser(symlink_location)
+        if not os.path.isdir(expanded_location):
+            return
+
+        symlink_path = os.path.join(expanded_location, os.path.basename(output_file))
+        try:
+            os.remove(symlink_path)
+        except FileNotFoundError:
+            pass
+
+        os.symlink(os.path.abspath(output_file), symlink_path)
+        print(f"Created symlink: {symlink_path}")
+    except Exception:
+        pass
+
+
 def _parse_stamp_or_date(s: str, cfg_fmt: str | None = None):
     from datetime import datetime as _dt
 
@@ -318,6 +341,8 @@ def main(config, output, user, after, before, cached, list_users, export_dir):
         include_rating=config_data["csv"]["rating"],
         max_films=config_data["csv"]["max_rows"],
     )
+
+    _symlink(output_file, config_data)
 
     print(f"\nExport complete! Import the file '{output_file}' to Letterboxd.")
 
