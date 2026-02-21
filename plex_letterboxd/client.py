@@ -11,7 +11,7 @@ Step 1 of refactor: Extract API-facing logic from exporter.py
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from plexapi.exceptions import PlexApiException
 from plexapi.server import PlexServer
@@ -25,7 +25,7 @@ def _parse_date_string(date_str: str) -> datetime:
         return datetime.strptime(date_str, "%Y-%m-%d")
 
 
-def extract_tmdb_id_from_plex_item(plex_item) -> Optional[str]:
+def extract_tmdb_id_from_plex_item(plex_item) -> str | None:
     """Extract TMDB ID from Plex item GUIDs (e.g., tmdb://<id>)."""
     if hasattr(plex_item, "guids") and plex_item.guids:
         for guid_obj in plex_item.guids:
@@ -38,7 +38,7 @@ def extract_tmdb_id_from_plex_item(plex_item) -> Optional[str]:
     return None
 
 
-def connect_to_plex(plex_config: dict[str, Any]) -> Optional[PlexServer]:
+def connect_to_plex(plex_config: dict[str, Any]) -> PlexServer | None:
     """Connect to Plex server using provided configuration dict."""
     try:
         server = PlexServer(
@@ -87,9 +87,7 @@ def get_movies_library(server: PlexServer, library_name: str = "Movies"):
         return None
 
 
-def _resolve_account_id(
-    server: PlexServer, user_filter: Optional[str]
-) -> Optional[int]:
+def _resolve_account_id(server: PlexServer, user_filter: str | None) -> int | None:
     if not user_filter:
         return None
     for user in get_users(server):
@@ -104,9 +102,9 @@ def _resolve_account_id(
 def get_watch_history(
     server: PlexServer,
     library,
-    user_filter: Optional[str] = None,
-    date_from: Optional[str] = None,
-    date_to: Optional[str] = None,
+    user_filter: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Get watch history for movies using fast server-side filtering,
@@ -118,7 +116,7 @@ def get_watch_history(
         target_account_id = _resolve_account_id(server, user_filter)
 
         print("Getting server watch history...")
-        mindate_dt: Optional[datetime] = None
+        mindate_dt: datetime | None = None
         if date_from:
             if isinstance(date_from, str):
                 mindate_dt = _parse_date_string(date_from)
