@@ -1,130 +1,153 @@
-"""
-Config utilities
-
-- Load YAML config
-- Merge/resolve Kometa or direct Plex config
-- Normalize option keys to a concise, consistent schema (no legacy keys)
-
-Canonical schema (after normalization):
-
-export:
-  output: str|None
-  after: str|None          # YYYY-MM-DD
-  before: str|None         # YYYY-MM-DD
-  user: str|None
-  library: str             # default: Movies
-  dir: str                 # default: data
-  file_pattern: str        # default: plex-watched-{user}-{timestamp}.csv
-  timestamp_format: str    # 'datetime' (YYYY-MM-DD-HH-MM) or 'date' (YYYY-MM-DD)
-
-csv:
-  rating: bool
-  max_rows: int
-  genres: bool             # export genres as tags
-  tags: str|None
-  rewatch: str             # all|first|last|false
-  mark_rewatch: bool
-"""
+"""Configuration models and Plex config extraction."""
 
 from __future__ import annotations
 
-import os
-from typing import Any
+from pathlib import Path
+from typing import Annotated, Literal
 
 import click
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+TimestampFormat = Literal["datetime", "date"]
+RewatchMode = Literal["all", "first", "last", "false", "null"]
 
 
-def load_config(path: str = "config.yaml") -> dict[str, Any]:
-    # Get the XDG config root
-    config_root = click.get_app_dir("plex-letterboxd")
-
-    # Load raw YAML first
-    with open(path, encoding="utf-8") as f:
-        raw_config = yaml.safe_load(f) or {}
-
-    # Apply defaults
-    defaults = {
-        "export": {
-            "output": None,
-            "after": None,
-            "before": None,
-            "user": None,
-            "library": "Movies",
-            "dir": os.path.join(config_root, "data"),
-            "file_pattern": "plex-watched-{user}-{timestamp}.csv",
-            "timestamp_format": "datetime",
-            "symlink_location": None,
-        },
-        "csv": {
-            "rating": False,
-            "max_rows": 1900,
-            "genres": False,
-            "tags": None,
-            "rewatch": "all",
-            "mark_rewatch": True,
-        },
-        "checkpoint": {
-            "use_csv": True,
-            "path": ".last-run.json",
-        },
-    }
-
-    # Deep merge defaults with user config
-    result = {}
-    for section, section_defaults in defaults.items():
-        result[section] = {**section_defaults, **raw_config.get(section, {})}
-
-    # Add non-default sections as-is (plex, kometa)
-    for key in raw_config:
-        if key not in defaults:
-            result[key] = raw_config[key]
-
-    # Resolve relative paths in export.dir relative to config root
-    if "export" in result:
-        dir_path = result["export"]["dir"]
-        if not os.path.isabs(dir_path):
-            result["export"]["dir"] = os.path.join(config_root, dir_path)
-
-    return result
+def _default_export_dir() -> Path:
+    return Path(click.get_app_dir("plex-letterboxd")) / "data"
 
 
-def extract_plex_config(config: dict[str, Any]) -> dict[str, Any] | None:
-    # Prefer Kometa token if configured
-    if "kometa" in config and config["kometa"].get("config_path"):
-        kometa_config_path = config["kometa"]["config_path"]
-        try:
-            with open(kometa_config_path, encoding="utf-8") as f:
-                kometa = yaml.safe_load(f) or {}
-            plex_cfg = kometa.get("plex", {})
-            extracted = {
-                "url": plex_cfg.get("url", "http://localhost:32400"),
-                "token": plex_cfg.get("token"),
-                "timeout": plex_cfg.get("timeout", 60),
-            }
-            print(f"Using Plex config from Kometa file: {kometa_config_path}")
-        except Exception as e:
-            print(f"Error reading Kometa config: {e}")
-            return None
-    elif "plex" in config and config["plex"].get("token"):
-        extracted = {
-            "url": config["plex"].get("url", "http://localhost:32400"),
-            "token": config["plex"].get("token"),
-            "timeout": config["plex"].get("timeout", 60),
-        }
-        print("Using direct Plex configuration from config file")
-    else:
-        print("Error: No valid Plex configuration found.")
-        print(
-            "Please configure either 'kometa.config_path' or 'plex.token' "
-            "in your config file."
-        )
+def _resolve_path(raw: str | Path | None, base_path: Path) -> Path | None:
+    if raw is None:
         return None
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = (base_path / candidate).resolve()
+    return candidate
 
-    # Allow URL override at top-level plex.url
-    plex_overrides = config.get("plex", {})
-    if plex_overrides.get("url") and not config.get("plex", {}).get("token"):
-        extracted["url"] = plex_overrides["url"]
-        print(f"Overriding Plex URL: {extracted['url']}")
 
-    return extracted
+def _resolve_required_path(raw: str | Path, base_path: Path) -> Path:
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = (base_path / candidate).resolve()
+    return candidate
+
+
+class PlexConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    url: NonEmptyStr = "http://localhost:32400"
+    token: NonEmptyStr
+    timeout: int = Field(default=60, ge=1)
+
+
+class PlexOverrides(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    url: NonEmptyStr | None = None
+    token: NonEmptyStr | None = None
+    timeout: int = Field(default=60, ge=1)
+
+
+class KometaConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    config_path: Path
+
+
+class ExportConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    output: Path | None = None
+    after: str | None = None
+    before: str | None = None
+    user: str | None = None
+    library: NonEmptyStr = "Movies"
+    dir: Path = Field(default_factory=_default_export_dir)
+    file_pattern: NonEmptyStr = "plex-watched-{user}-{timestamp}.csv"
+    timestamp_format: TimestampFormat = "datetime"
+    symlink_location: Path | None = None
+
+
+class CsvConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    rating: bool = False
+    max_rows: int = Field(default=1900, ge=1)
+    genres: bool = False
+    tags: str | None = None
+    rewatch: RewatchMode = "all"
+    mark_rewatch: bool = True
+
+
+class CheckpointConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    use_csv: bool = True
+    path: Path = Path(".last-run.json")
+
+
+class AppConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    plex: PlexOverrides = Field(default_factory=PlexOverrides)
+    kometa: KometaConfig | None = None
+    export: ExportConfig = Field(default_factory=ExportConfig)
+    csv: CsvConfig = Field(default_factory=CsvConfig)
+    checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
+
+    @model_validator(mode="after")
+    def validate_plex_source(self) -> AppConfig:
+        if self.kometa is None and self.plex.token is None:
+            raise ValueError(
+                "configure either kometa.config_path or plex.token in the config file"
+            )
+        return self
+
+
+def load_config(path: str | Path = "config.yaml") -> AppConfig:
+    config_path = Path(path).expanduser()
+    with config_path.open(encoding="utf-8") as handle:
+        raw_config = yaml.safe_load(handle) or {}
+    config = AppConfig.model_validate(raw_config)
+    base_path = config_path.parent.resolve()
+    if config.kometa is not None:
+        config.kometa.config_path = _resolve_required_path(
+            config.kometa.config_path,
+            base_path,
+        )
+    config.export.dir = _resolve_required_path(config.export.dir, base_path)
+    config.export.output = _resolve_path(config.export.output, base_path)
+    config.export.symlink_location = _resolve_path(
+        config.export.symlink_location,
+        base_path,
+    )
+    config.checkpoint.path = _resolve_required_path(
+        config.checkpoint.path,
+        base_path,
+    )
+    return config
+
+
+def extract_plex_config(config: AppConfig) -> PlexConfig:
+    if config.kometa is not None:
+        with config.kometa.config_path.open(encoding="utf-8") as handle:
+            kometa_raw = yaml.safe_load(handle) or {}
+        if not isinstance(kometa_raw, dict):
+            raise ValueError(
+                "Unexpected YAML structure in Kometa config "
+                f"{config.kometa.config_path}"
+            )
+        plex_raw = kometa_raw.get("plex")
+        if not isinstance(plex_raw, dict):
+            raise ValueError(
+                f"Kometa config '{config.kometa.config_path}' is missing "
+                "a 'plex' section"
+            )
+        plex_config = PlexConfig.model_validate(plex_raw)
+        if config.plex.url is not None and config.plex.token is None:
+            plex_config.url = config.plex.url
+        return plex_config
+
+    return PlexConfig.model_validate(config.plex.model_dump())
